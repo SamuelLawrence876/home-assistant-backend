@@ -1,4 +1,4 @@
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
+import type { APIGatewayProxyEventV2, Context } from 'aws-lambda';
 import { handler } from './index';
 
 const buildEvent = (path: string): APIGatewayProxyEventV2 =>
@@ -12,14 +12,29 @@ const buildEvent = (path: string): APIGatewayProxyEventV2 =>
     rawQueryString: '',
   } as APIGatewayProxyEventV2);
 
+const mockContext: Context = {
+  awsRequestId: 'test-request-id',
+  functionName: 'test-function',
+  functionVersion: '$LATEST',
+  invokedFunctionArn: 'arn:aws:lambda:eu-west-1:123:function:test',
+  memoryLimitInMB: '256',
+  logGroupName: '/aws/lambda/test',
+  logStreamName: '2024/01/01/test',
+  getRemainingTimeInMillis: () => 5000,
+  done: () => {},
+  fail: () => {},
+  succeed: () => {},
+  callbackWaitsForEmptyEventLoop: false,
+};
+
 describe('requestHandler', () => {
   beforeEach(() => {
     process.env.SERVICE_NAME = 'test-service';
     process.env.STAGE = 'test';
   });
 
-  it('returns a 200 health response for /health', async () => {
-    const result = await handler(buildEvent('/health'));
+  it('returns 200 with health status for /health', async () => {
+    const result = await handler(buildEvent('/health'), mockContext);
     const body = JSON.parse(result.body as string);
 
     expect(result.statusCode).toBe(200);
@@ -28,12 +43,11 @@ describe('requestHandler', () => {
     expect(body.stage).toBe('test');
   });
 
-  it('returns a 200 response for any other path', async () => {
-    const result = await handler(buildEvent('/api/items'));
+  it('returns 404 for an unrecognised path', async () => {
+    const result = await handler(buildEvent('/unknown'), mockContext);
     const body = JSON.parse(result.body as string);
 
-    expect(result.statusCode).toBe(200);
-    expect(body.service).toBe('test-service');
-    expect(body.path).toBe('/api/items');
+    expect(result.statusCode).toBe(404);
+    expect(body.error).toBe('Not Found');
   });
 });
