@@ -7,9 +7,17 @@ import { Queue } from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
+export interface ServerlessStackProps extends StackProps {
+  // Passed from bin/app.ts when deploying an ephemeral branch environment.
+  // Omit for a production deploy.
+  stage?: string;
+}
+
 export class ServerlessStack extends Stack {
-  constructor(scope: Construct, id: string, props?: StackProps) {
+  constructor(scope: Construct, id: string, props?: ServerlessStackProps) {
     super(scope, id, props);
+
+    const stage = props?.stage ?? 'production';
 
     const deadLetterQueue = new Queue(this, 'RequestHandlerDlq', {
       retentionPeriod: Duration.days(14),
@@ -24,13 +32,34 @@ export class ServerlessStack extends Stack {
       memorySize: 256,
       environment: {
         SERVICE_NAME: id,
-        STAGE: this.stackName,
+        STAGE: stage,
       },
       bundling: {
         minify: true,
         sourceMap: true,
       },
       deadLetterQueue,
+    });
+
+    const api = new HttpApi(this, 'Api', {
+      apiName: `${id}-api`,
+    });
+
+    api.addRoutes({
+      path: '/health',
+      methods: [HttpMethod.GET],
+      integration: new HttpLambdaIntegration('HealthIntegration', requestHandler),
+    });
+
+    api.addRoutes({
+      path: '/{proxy+}',
+      methods: [HttpMethod.ANY],
+      integration: new HttpLambdaIntegration('ProxyIntegration', requestHandler),
+    });
+
+    new CfnOutput(this, 'ApiUrl', {
+      value: api.url ?? '',
+      description: 'HTTP API endpoint URL',
     });
   }
 }

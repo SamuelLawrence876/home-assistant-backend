@@ -63,51 +63,52 @@ npx cdk deploy
 
 ### GitHub Actions workflows
 
-| Workflow | Trigger | Action |
+| Workflow | Trigger | What happens |
 |---|---|---|
-| `ci.yml` | Push to any branch (except `main`), PRs | Lint, type-check, unit tests, infra tests |
-| `preview.yml` | PR opened / updated | Deploy ephemeral stack, post URL as PR comment |
-| `preview.yml` | PR closed / merged | Destroy ephemeral stack |
-| `deploy.yml` | Push to `main` | Deploy to **dev** (stable stack) |
-| `deploy.yml` | Push tag `v*` | Deploy to **production** |
+| `ci.yml` | Push to any branch, any PR | Lint, type-check, unit tests, infra tests |
+| `pr.yml` | PR opened / updated against `main` | Deploy **ephemeral stack** named `serverless-starter-{stage}` and post the URL as a PR comment |
+| `pr.yml` | PR closed (merged or abandoned) | **Destroy** the ephemeral stack automatically |
+| `deploy.yml` | Push to `main` or tag `v*` | Deploy **production stack** (`serverless-starter`, no stage suffix) |
 
-### Ephemeral (preview) environments
+### Ephemeral environments
 
-Every pull request gets its own isolated AWS stack, destroyed automatically when the PR closes.
+Every PR against `main` gets its own isolated AWS stack so you can test changes end-to-end before merging.
 
-**Stage naming** — the stage identifier is extracted from the branch name:
+**How the stage name is derived from the branch name:**
 
-| Branch name | Extracted stage | Stack name |
-|---|---|---|
-| `feature/PROJ-123-add-search` | `proj-123` | `serverless-starter-proj-123` |
-| `fix/ABC-456-crash-on-boot` | `abc-456` | `serverless-starter-abc-456` |
-| `my-random-branch` _(no ticket)_ | `pr-42` | `serverless-starter-pr-42` |
+| Branch | Derived stage |
+|---|---|
+| `feature/ABC-123-my-feature` | `abc-123` (ticket ID extracted) |
+| `fix/update-handler` | `fix-update-handler` (sanitised slug) |
+| `dependabot/npm_and_yarn/...` | `dependabot-npm-and` (slug, max 20 chars) |
 
-After deploy, the workflow posts a comment on the PR with the live API URL and stack name. On subsequent pushes to the same PR the comment is updated in-place.
+The CDK stack is named `<STACK_BASE_NAME>-<stage>` (e.g. `serverless-starter-abc-123`).
 
-To deploy a preview manually (e.g. from your local machine):
+This is equivalent to passing `-c stage=abc-123` to the CDK CLI directly:
 
 ```bash
-npx cdk deploy -c stage=proj-123
+npx cdk deploy serverless-starter-abc-123 --require-approval never -c stage=abc-123
 ```
 
-To destroy it:
+To destroy a stack manually:
 
 ```bash
-npx cdk destroy --force -c stage=proj-123
+npx cdk destroy serverless-starter-abc-123 --force -c stage=abc-123
 ```
 
 ### Required GitHub secrets
 
-The deploy and preview workflows use AWS OIDC for credential-free authentication (no long-lived access keys):
+Workflows use AWS OIDC — no long-lived access keys stored in GitHub.
+
+Create three **GitHub Environments** (`ephemeral`, `production`) and add this secret to each:
 
 | Secret | Description |
 |---|---|
-| `AWS_DEPLOY_ROLE_ARN` | IAM role ARN with CDK deploy permissions |
+| `AWS_DEPLOY_ROLE_ARN` | ARN of the IAM role GitHub Actions assumes via OIDC |
 
-Set this under **Settings → Environments → Secrets** for each environment (`dev`, `production`).
+**Settings → Environments → [environment name] → Secrets**
 
-See the [AWS OIDC guide](https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services) for how to create the trust role.
+The IAM role trust policy should allow `token.actions.githubusercontent.com` as the OIDC provider. See the [AWS docs](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html) for setup.
 
 ## Adding a new Lambda function
 

@@ -4,20 +4,22 @@ import { ServerlessStack } from '../lib/main-stack';
 
 const app = new App();
 
-const baseName = (app.node.tryGetContext('stackName') as string | undefined) ?? 'serverless-starter';
+const stackName = (app.node.tryGetContext('stackName') as string | undefined) ?? 'serverless-starter';
 
-// When deploying an ephemeral branch environment, pass -c stage=<ticket-or-pr-id>
-// This produces a uniquely named stack per branch: e.g. serverless-starter-proj-123
+// When -c stage=<value> is supplied (e.g. from a branch deploy) the stack is
+// named <stackName>-<stage> so each branch gets its own isolated set of
+// resources.  Without a stage the base name is used (production deploy).
 const stage = app.node.tryGetContext('stage') as string | undefined;
-const stackId = stage ? `${baseName}-${stage}` : baseName;
+const stackId = stage ? `${stackName}-${stage}` : stackName;
 
 const stack = new ServerlessStack(app, stackId, {
+  stage,
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION ?? 'eu-west-1',
   },
 });
 
-Tags.of(stack).add('Project', baseName);
-Tags.of(stack).add('Stage', stage ?? 'stable');
+Tags.of(stack).add('Project', stackName);
+Tags.of(stack).add('Stage', stage ?? 'production');
 Tags.of(stack).add('ManagedBy', 'aws-cdk');
