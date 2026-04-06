@@ -66,18 +66,48 @@ npx cdk deploy
 | Workflow | Trigger | Action |
 |---|---|---|
 | `ci.yml` | Push to any branch (except `main`), PRs | Lint, type-check, unit tests, infra tests |
-| `deploy.yml` | Push to `main` | Deploy to **dev** environment |
-| `deploy.yml` | Push tag `v*` | Deploy to **production** environment |
+| `preview.yml` | PR opened / updated | Deploy ephemeral stack, post URL as PR comment |
+| `preview.yml` | PR closed / merged | Destroy ephemeral stack |
+| `deploy.yml` | Push to `main` | Deploy to **dev** (stable stack) |
+| `deploy.yml` | Push tag `v*` | Deploy to **production** |
+
+### Ephemeral (preview) environments
+
+Every pull request gets its own isolated AWS stack, destroyed automatically when the PR closes.
+
+**Stage naming** — the stage identifier is extracted from the branch name:
+
+| Branch name | Extracted stage | Stack name |
+|---|---|---|
+| `feature/PROJ-123-add-search` | `proj-123` | `serverless-starter-proj-123` |
+| `fix/ABC-456-crash-on-boot` | `abc-456` | `serverless-starter-abc-456` |
+| `my-random-branch` _(no ticket)_ | `pr-42` | `serverless-starter-pr-42` |
+
+After deploy, the workflow posts a comment on the PR with the live API URL and stack name. On subsequent pushes to the same PR the comment is updated in-place.
+
+To deploy a preview manually (e.g. from your local machine):
+
+```bash
+npx cdk deploy -c stage=proj-123
+```
+
+To destroy it:
+
+```bash
+npx cdk destroy --force -c stage=proj-123
+```
 
 ### Required GitHub secrets
 
-The deploy workflow uses AWS OIDC for credential-free authentication:
+The deploy and preview workflows use AWS OIDC for credential-free authentication (no long-lived access keys):
 
 | Secret | Description |
 |---|---|
-| `AWS_DEPLOY_ROLE_ARN` | IAM role ARN with CDK deploy permissions (per environment) |
+| `AWS_DEPLOY_ROLE_ARN` | IAM role ARN with CDK deploy permissions |
 
-Set these under **Settings → Environments → Secrets** for each environment (`dev`, `production`).
+Set this under **Settings → Environments → Secrets** for each environment (`dev`, `production`).
+
+See the [AWS OIDC guide](https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services) for how to create the trust role.
 
 ## Adding a new Lambda function
 

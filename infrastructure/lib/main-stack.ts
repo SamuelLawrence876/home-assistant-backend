@@ -32,26 +32,5 @@ export class ServerlessStack extends Stack {
       },
       deadLetterQueue,
     });
-
-    const api = new HttpApi(this, 'Api', {
-      apiName: `${id}-api`,
-    });
-
-    api.addRoutes({
-      path: '/health',
-      methods: [HttpMethod.GET],
-      integration: new HttpLambdaIntegration('HealthIntegration', requestHandler),
-    });
-
-    api.addRoutes({
-      path: '/{proxy+}',
-      methods: [HttpMethod.ANY],
-      integration: new HttpLambdaIntegration('ProxyIntegration', requestHandler),
-    });
-
-    new CfnOutput(this, 'ApiUrl', {
-      value: api.url ?? '',
-      description: 'HTTP API endpoint URL',
-    });
   }
 }

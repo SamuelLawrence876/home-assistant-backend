@@ -1,0 +1,160 @@
+name: Preview Environment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+env:
+  AWS_REGION: eu-west-1
+
+jobs:
+  resolve-stage:
+    name: Resolve stage name
+    runs-on: ubuntu-latest
+    outputs:
+      stage: ${{ steps.extract.outputs.stage }}
+      stack-name: ${{ steps.extract.outputs.stack-name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract stage from branch name
+        id: extract
+        run: |
+          BASE_NAME=$(jq -r '.name' package.json)
+          BRANCH="${{ github.head_ref }}"
+
+          # Try to extract a JIRA-style ticket ID (e.g. PROJ-123 from feature/PROJ-123-add-thing)
+          TICKET=$(echo "$BRANCH" | grep -oE '[A-Za-z]+-[0-9]+' | head -1)
+
+          if [ -n "$TICKET" ]; then
+            STAGE=$(echo "$TICKET" | tr '[:upper:]' '[:lower:]')
+          else
+            # Fall back to PR number when no ticket ID is found in the branch name
+            STAGE="pr-${{ github.event.number }}"
+          fi
+
+          STACK_NAME="${BASE_NAME}-${STAGE}"
+
+          echo "stage=$STAGE"           >> "$GITHUB_OUTPUT"
+          echo "stack-name=$STACK_NAME" >> "$GITHUB_OUTPUT"
+          echo "Resolved stage: $STAGE → stack: $STACK_NAME"
+
+  deploy:
+    name: Deploy preview
+    needs: resolve-stage
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bootstrap CDK
+        run: npx cdk bootstrap
+
+      - name: Deploy preview stack
+        run: |
+          npx cdk deploy --require-approval never \
+            -c stage=${{ needs.resolve-stage.outputs.stage }}
+
+      - name: Get deployed API URL
+        id: api-url
+        run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name "${{ needs.resolve-stage.outputs.stack-name }}" \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text \
+            --region ${{ env.AWS_REGION }})
+          echo "url=$API_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Post or update preview comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const stage     = '${{ needs.resolve-stage.outputs.stage }}';
+            const stackName = '${{ needs.resolve-stage.outputs.stack-name }}';
+            const apiUrl    = '${{ steps.api-url.outputs.url }}';
+            const marker    = '<!-- preview-env-comment -->';
+
+            const body = [
+              marker,
+              '## Preview environment deployed',
+              '',
+              `| | |`,
+              `|---|---|`,
+              `| **Stage** | \`${stage}\` |`,
+              `| **Stack** | \`${stackName}\` |`,
+              `| **API URL** | ${apiUrl} |`,
+              '',
+              '_This environment will be automatically destroyed when the PR is closed._',
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  destroy:
+    name: Destroy preview
+    needs: resolve-stage
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Destroy preview stack
+        run: |
+          npx cdk destroy --force \
+            -c stage=${{ needs.resolve-stage.outputs.stage }}
