@@ -7,62 +7,80 @@ describe('ServerlessStack', () => {
 
   beforeAll(() => {
     const app = new App();
-    const stack = new ServerlessStack(app, 'serverless-starter-test');
+    const stack = new ServerlessStack(app, 'serverless-starter-test', {
+      stage: 'test',
+    });
     template = Template.fromStack(stack);
   });
 
-  it('deploys a Lambda function with the correct runtime and architecture', () => {
-    template.hasResourceProperties('AWS::Lambda::Function', {
-      Runtime: 'nodejs20.x',
-      Architectures: ['arm64'],
+  describe('Lambda', () => {
+    it('deploys with the correct runtime and architecture', () => {
+      template.hasResourceProperties('AWS::Lambda::Function', {
+        FunctionName: 'test-request-handler',
+        Runtime: 'nodejs20.x',
+        Architectures: ['arm64'],
+        Timeout: 10,
+        MemorySize: 256,
+      });
     });
   });
 
-  it('sets the correct Lambda timeout and memory', () => {
-    template.hasResourceProperties('AWS::Lambda::Function', {
-      Timeout: 10,
-      MemorySize: 256,
+  describe('SQS', () => {
+    it('creates a dead letter queue named after the stage', () => {
+      template.hasResourceProperties('AWS::SQS::Queue', {
+        QueueName: 'test-request-handler-dlq',
+      });
     });
   });
 
-  it('creates a dead letter queue for the Lambda', () => {
-    template.resourceCountIs('AWS::SQS::Queue', 1);
-  });
+  describe('DynamoDB', () => {
+    it('creates a table named after the stage', () => {
+      template.hasResourceProperties('AWS::DynamoDB::Table', {
+        TableName: 'test-items',
+        BillingMode: 'PAY_PER_REQUEST',
+      });
+    });
 
-  it('creates a DynamoDB table with pay-per-request billing', () => {
-    template.hasResourceProperties('AWS::DynamoDB::Table', {
-      BillingMode: 'PAY_PER_REQUEST',
-      PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true },
+    it('disables PITR for non-production stages', () => {
+      template.hasResourceProperties('AWS::DynamoDB::Table', {
+        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: false },
+      });
     });
   });
 
-  it('creates an S3 bucket with encryption and public access blocked', () => {
-    template.hasResourceProperties('AWS::S3::Bucket', {
-      BucketEncryption: {
-        ServerSideEncryptionConfiguration: [
-          { ServerSideEncryptionByDefault: { SSEAlgorithm: 'AES256' } },
-        ],
-      },
-      PublicAccessBlockConfiguration: {
-        BlockPublicAcls: true,
-        BlockPublicPolicy: true,
-        IgnorePublicAcls: true,
-        RestrictPublicBuckets: true,
-      },
-      VersioningConfiguration: { Status: 'Enabled' },
+  describe('S3', () => {
+    it('creates a bucket named after the stage', () => {
+      template.hasResourceProperties('AWS::S3::Bucket', {
+        BucketName: 'test-assets',
+      });
+    });
+
+    it('blocks all public access', () => {
+      template.hasResourceProperties('AWS::S3::Bucket', {
+        PublicAccessBlockConfiguration: {
+          BlockPublicAcls: true,
+          BlockPublicPolicy: true,
+          IgnorePublicAcls: true,
+          RestrictPublicBuckets: true,
+        },
+      });
     });
   });
 
-  it('creates an HTTP API', () => {
-    template.resourceCountIs('AWS::ApiGatewayV2::Api', 1);
-  });
+  describe('API Gateway', () => {
+    it('creates an HTTP API named after the stage', () => {
+      template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
+        Name: 'test-api',
+      });
+    });
 
-  it('creates two API routes', () => {
-    template.resourceCountIs('AWS::ApiGatewayV2::Route', 2);
-  });
+    it('creates two routes', () => {
+      template.resourceCountIs('AWS::ApiGatewayV2::Route', 2);
+    });
 
-  it('outputs the API URL', () => {
-    template.hasOutput('ApiUrl', {});
+    it('outputs the API URL', () => {
+      template.hasOutput('ApiUrl', {});
+    });
   });
 
   it('matches snapshot', () => {

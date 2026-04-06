@@ -1,184 +1,91 @@
-import { Logger } from './logger';
+import * as log from './logger';
 
-const makeLogger = () => new Logger({ service: 'test-svc', stage: 'test' });
-
-describe('Logger', () => {
-  let logSpy: jest.SpyInstance;
-  let infoSpy: jest.SpyInstance;
-  let warnSpy: jest.SpyInstance;
-  let errorSpy: jest.SpyInstance;
+describe('logger', () => {
+  let consoleSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-    infoSpy = jest.spyOn(console, 'info').mockImplementation(() => {});
-    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    process.env.SERVICE_NAME = 'test-svc';
+    process.env.STAGE = 'test';
+    delete process.env.LOG_LEVEL;
   });
 
-  const lastRecord = (spy: jest.SpyInstance) => JSON.parse(spy.mock.calls[0][0] as string);
+  const lastRecord = () => JSON.parse(consoleSpy.mock.calls[0][0] as string);
 
-  describe('structured output', () => {
-    it('writes a valid JSON record with required fields', () => {
-      makeLogger().info('hello world');
+  describe('output shape', () => {
+    it('writes structured JSON with required fields', () => {
+      log.info('hello world');
 
-      const record = lastRecord(infoSpy);
-
-      expect(record).toMatchObject({
-        level: 'info',
+      expect(lastRecord()).toMatchObject({
+        level: 'INFO',
         message: 'hello world',
         service: 'test-svc',
         stage: 'test',
       });
-      expect(record.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    });
-
-    it('routes debug to console.log', () => {
-      makeLogger().debug('dbg');
-      expect(logSpy).toHaveBeenCalledTimes(1);
-      expect(infoSpy).not.toHaveBeenCalled();
-    });
-
-    it('routes warn to console.warn', () => {
-      makeLogger().warn('uh oh');
-      expect(warnSpy).toHaveBeenCalledTimes(1);
-    });
-
-    it('routes error to console.error', () => {
-      makeLogger().error('boom');
-      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(lastRecord().timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
 
     it('merges extra fields into the record', () => {
-      makeLogger().info('with extras', { correlationId: 'abc-123', userId: 42 });
+      log.info('with extras', { correlationId: 'abc', count: 5 });
 
-      const record = lastRecord(infoSpy);
+      expect(lastRecord()).toMatchObject({ correlationId: 'abc', count: 5 });
+    });
 
-      expect(record.correlationId).toBe('abc-123');
-      expect(record.userId).toBe(42);
+    it('all levels emit to console.log', () => {
+      log.debug('d');
+      log.info('i');
+      log.warn('w');
+      log.error('e');
+
+      expect(consoleSpy).toHaveBeenCalledTimes(4);
     });
   });
 
   describe('log level filtering', () => {
-    const originalEnv = process.env;
+    it('suppresses messages below LOG_LEVEL', () => {
+      process.env.LOG_LEVEL = 'WARN';
 
-    beforeEach(() => {
-      process.env = { ...originalEnv };
+      log.debug('suppressed');
+      log.info('suppressed');
+      log.warn('visible');
+      log.error('visible');
+
+      expect(consoleSpy).toHaveBeenCalledTimes(2);
     });
 
-    afterAll(() => {
-      process.env = originalEnv;
-    });
-
-    it('suppresses messages below the configured level', () => {
-      process.env.LOG_LEVEL = 'warn';
-      const log = makeLogger();
-
-      log.debug('suppressed debug');
-      log.info('suppressed info');
-      log.warn('visible warn');
-
-      expect(logSpy).not.toHaveBeenCalled();
-      expect(infoSpy).not.toHaveBeenCalled();
-      expect(warnSpy).toHaveBeenCalledTimes(1);
-    });
-
-    it('defaults to info when LOG_LEVEL is unset', () => {
-      delete process.env.LOG_LEVEL;
-      const log = makeLogger();
-
+    it('defaults to INFO when LOG_LEVEL is unset', () => {
       log.debug('suppressed');
       log.info('visible');
 
-      expect(logSpy).not.toHaveBeenCalled();
-      expect(infoSpy).toHaveBeenCalledTimes(1);
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
+      expect(lastRecord().level).toBe('INFO');
     });
 
-    it('falls back to info for unknown LOG_LEVEL values', () => {
-      process.env.LOG_LEVEL = 'verbose';
-      const log = makeLogger();
+    it('falls back to INFO for unknown LOG_LEVEL values', () => {
+      process.env.LOG_LEVEL = 'VERBOSE';
 
       log.info('still works');
 
-      expect(infoSpy).toHaveBeenCalledTimes(1);
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('error serialisation', () => {
+  describe('error()', () => {
     it('expands Error objects into structured fields', () => {
-      makeLogger().error('something failed', new Error('bad things'));
+      log.error('something failed', new Error('bad things'));
 
-      const record = lastRecord(errorSpy);
-
-      expect(record.errorName).toBe('Error');
-      expect(record.errorMessage).toBe('bad things');
-      expect(record.stack).toContain('Error: bad things');
-    });
-
-    it('accepts plain objects as extra context', () => {
-      makeLogger().error('failed', { code: 'TIMEOUT', retries: 3 });
-
-      const record = lastRecord(errorSpy);
-
-      expect(record.code).toBe('TIMEOUT');
-      expect(record.retries).toBe(3);
-    });
-
-    it('merges extra fields alongside Error details', () => {
-      makeLogger().error('failed', new Error('oops'), { traceId: 'xyz' });
-
-      const record = lastRecord(errorSpy);
-
-      expect(record.errorMessage).toBe('oops');
-      expect(record.traceId).toBe('xyz');
-    });
-  });
-
-  describe('child logger', () => {
-    it('inherits parent service and stage', () => {
-      const child = makeLogger().child({ requestId: 'req-1' });
-      child.info('from child');
-
-      const record = lastRecord(infoSpy);
-
-      expect(record.service).toBe('test-svc');
-      expect(record.stage).toBe('test');
-      expect(record.requestId).toBe('req-1');
-    });
-
-    it('does not mutate the parent logger context', () => {
-      const parent = makeLogger();
-      parent.child({ secret: 'hidden' });
-      parent.info('parent message');
-
-      const record = lastRecord(infoSpy);
-
-      expect(record.secret).toBeUndefined();
-    });
-
-    it('child context is merged with per-call extras', () => {
-      const child = makeLogger().child({ requestId: 'req-2' });
-      child.info('message', { itemId: 99 });
-
-      const record = lastRecord(infoSpy);
-
-      expect(record.requestId).toBe('req-2');
-      expect(record.itemId).toBe(99);
-    });
-  });
-
-  describe('withLambdaContext', () => {
-    it('attaches requestId and functionName', () => {
-      const log = makeLogger().withLambdaContext({
-        awsRequestId: 'lambda-req-abc',
-        functionName: 'my-function',
+      expect(lastRecord()).toMatchObject({
+        level: 'ERROR',
+        errorName: 'Error',
+        errorMessage: 'bad things',
       });
+      expect(lastRecord().stack).toContain('Error: bad things');
+    });
 
-      log.info('invoked');
+    it('accepts plain extra context', () => {
+      log.error('failed', { code: 'TIMEOUT', retries: 3 });
 
-      const record = lastRecord(infoSpy);
-
-      expect(record.requestId).toBe('lambda-req-abc');
-      expect(record.functionName).toBe('my-function');
+      expect(lastRecord()).toMatchObject({ code: 'TIMEOUT', retries: 3 });
     });
   });
 });

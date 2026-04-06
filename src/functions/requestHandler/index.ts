@@ -1,27 +1,33 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2, Context } from 'aws-lambda';
-import { logger as rootLogger } from '../../utils/logger';
-import { internalError, notFound, ok } from '../../utils/response';
+import type { ErrorResponse, HealthResponse } from '../../models';
+import * as log from '../../utils/logger';
 import { getEnvironment } from './environment';
+
+const json = (statusCode: number, body: unknown): APIGatewayProxyStructuredResultV2 => ({
+  statusCode,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+});
 
 export const handler = async (
   event: APIGatewayProxyEventV2,
   context: Context,
 ): Promise<APIGatewayProxyStructuredResultV2> => {
   const { serviceName, stage } = getEnvironment();
-  const log = rootLogger.withLambdaContext(context).child({ path: event.rawPath });
 
-  log.info('request received');
+  log.info('request received', {
+    requestId: context.awsRequestId,
+    path: event.rawPath,
+    method: event.requestContext.http?.method,
+  });
 
-  try {
-    if (event.rawPath === '/health') {
-      log.debug('health check');
-      return ok({ status: 'healthy', service: serviceName, stage });
-    }
-
-    log.warn('unmatched route', { rawPath: event.rawPath });
-    return notFound(`No route for ${event.rawPath}`);
-  } catch (err) {
-    log.error('unhandled error', err instanceof Error ? err : new Error(String(err)));
-    return internalError();
+  if (event.rawPath === '/health') {
+    const body: HealthResponse = { status: 'healthy', service: serviceName, stage };
+    return json(200, body);
   }
+
+  log.warn('unmatched route', { path: event.rawPath });
+
+  const body: ErrorResponse = { error: 'Not Found', message: `No handler for ${event.rawPath}` };
+  return json(404, body);
 };

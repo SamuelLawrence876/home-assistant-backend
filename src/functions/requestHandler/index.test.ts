@@ -6,7 +6,9 @@ const buildEvent = (path: string): APIGatewayProxyEventV2 =>
     rawPath: path,
     version: '2.0',
     routeKey: '$default',
-    requestContext: {} as APIGatewayProxyEventV2['requestContext'],
+    requestContext: {
+      http: { method: 'GET', path, protocol: 'HTTP/1.1', sourceIp: '', userAgent: '' },
+    } as APIGatewayProxyEventV2['requestContext'],
     headers: {},
     isBase64Encoded: false,
     rawQueryString: '',
@@ -31,6 +33,7 @@ describe('requestHandler', () => {
   beforeEach(() => {
     process.env.SERVICE_NAME = 'test-service';
     process.env.STAGE = 'test';
+    jest.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   it('returns 200 with health status for /health', async () => {

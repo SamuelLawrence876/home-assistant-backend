@@ -8,6 +8,7 @@ import { Construct } from 'constructs';
 import * as path from 'path';
 
 export interface RequestHandlerProps {
+  namePrefix: string;
   stage: string;
   table: ITable;
   bucket: IBucket;
@@ -19,11 +20,15 @@ export class RequestHandler extends Construct {
   constructor(scope: Construct, id: string, props: RequestHandlerProps) {
     super(scope, id);
 
+    const { namePrefix, stage, table, bucket } = props;
+
     const dlq = new Queue(this, 'Dlq', {
+      queueName: `${namePrefix}-request-handler-dlq`,
       retentionPeriod: Duration.days(14),
     });
 
     this.fn = new NodejsFunction(this, 'Function', {
+      functionName: `${namePrefix}-request-handler`,
       runtime: Runtime.NODEJS_20_X,
       architecture: Architecture.ARM_64,
       entry: path.join(__dirname, '../../../../src/functions/requestHandler/index.ts'),
@@ -31,10 +36,10 @@ export class RequestHandler extends Construct {
       timeout: Duration.seconds(10),
       memorySize: 256,
       environment: {
-        SERVICE_NAME: scope.node.id,
-        STAGE: props.stage,
-        TABLE_NAME: props.table.tableName,
-        BUCKET_NAME: props.bucket.bucketName,
+        SERVICE_NAME: `${namePrefix}-request-handler`,
+        STAGE: stage,
+        TABLE_NAME: table.tableName,
+        BUCKET_NAME: bucket.bucketName,
       },
       bundling: {
         minify: true,
@@ -43,7 +48,7 @@ export class RequestHandler extends Construct {
       deadLetterQueue: dlq,
     });
 
-    props.table.grantReadWriteData(this.fn);
-    props.bucket.grantReadWrite(this.fn);
+    table.grantReadWriteData(this.fn);
+    bucket.grantReadWrite(this.fn);
   }
 }

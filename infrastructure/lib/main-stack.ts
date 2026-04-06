@@ -1,12 +1,13 @@
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { ApiGateway } from './constructs/api-gateway';
+import { ApiGateway, CustomDomainConfig } from './constructs/api-gateway';
 import { Database } from './constructs/database';
 import { RequestHandler } from './constructs/request-handler';
 import { Storage } from './constructs/storage';
 
 export interface ServerlessStackProps extends StackProps {
   stage?: string;
+  customDomain?: CustomDomainConfig;
 }
 
 export class ServerlessStack extends Stack {
@@ -14,16 +15,26 @@ export class ServerlessStack extends Stack {
     super(scope, id, props);
 
     const stage = props?.stage ?? 'production';
+    const isProd = stage === 'production';
 
-    const database = new Database(this, 'Database');
-    const storage = new Storage(this, 'Storage');
+    // Every resource is prefixed with the stage so ephemeral and production
+    // stacks never share names (e.g. "abc-123-items" vs "production-items").
+    const namePrefix = stage;
+
+    const database = new Database(this, 'Database', { namePrefix, isProd });
+    const storage = new Storage(this, 'Storage', { namePrefix, isProd });
 
     const requestHandler = new RequestHandler(this, 'RequestHandler', {
+      namePrefix,
       stage,
       table: database.table,
       bucket: storage.bucket,
     });
 
-    new ApiGateway(this, 'Api', { handler: requestHandler.fn });
+    new ApiGateway(this, 'Api', {
+      handler: requestHandler.fn,
+      namePrefix,
+      customDomain: props?.customDomain,
+    });
   }
 }
