@@ -1,9 +1,10 @@
 import { RemovalPolicy } from 'aws-cdk-lib';
 import { AttributeType, BillingMode, Table } from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
+import { addStagePrefix } from '../utils/naming';
 
 export interface DatabaseProps {
-  namePrefix: string;
+  stage: string;
   isProd: boolean;
 }
 
@@ -13,10 +14,10 @@ export class Database extends Construct {
   constructor(scope: Construct, id: string, props: DatabaseProps) {
     super(scope, id);
 
-    const { namePrefix, isProd } = props;
+    const { stage, isProd } = props;
 
     this.table = new Table(this, 'Table', {
-      tableName: `${namePrefix}-items`,
+      tableName: addStagePrefix(stage, 'items'),
       partitionKey: { name: 'pk', type: AttributeType.STRING },
       sortKey: { name: 'sk', type: AttributeType.STRING },
       billingMode: BillingMode.PAY_PER_REQUEST,

@@ -1,9 +1,10 @@
 import { RemovalPolicy } from 'aws-cdk-lib';
 import { BlockPublicAccess, Bucket, BucketEncryption } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
+import { addStagePrefix } from '../utils/naming';
 
 export interface StorageProps {
-  namePrefix: string;
+  stage: string;
   isProd: boolean;
 }
 
@@ -13,16 +14,15 @@ export class Storage extends Construct {
   constructor(scope: Construct, id: string, props: StorageProps) {
     super(scope, id);
 
-    const { namePrefix, isProd } = props;
+    const { stage, isProd } = props;
 
     this.bucket = new Bucket(this, 'Bucket', {
-      bucketName: `${namePrefix}-assets`,
+      bucketName: addStagePrefix(stage, 'assets'),
       encryption: BucketEncryption.S3_MANAGED,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       versioned: isProd,
       enforceSSL: true,
       removalPolicy: isProd ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
-      // Automatically empties bucket on destroy for ephemeral stacks
       autoDeleteObjects: !isProd,
     });
   }

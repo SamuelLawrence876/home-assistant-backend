@@ -6,18 +6,15 @@ import { IFunction } from 'aws-cdk-lib/aws-lambda';
 import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { ApiGatewayv2DomainProperties } from 'aws-cdk-lib/aws-route53-targets';
 import { Construct } from 'constructs';
+import { addStagePrefix } from '../utils/naming';
 
-export interface CustomDomainConfig {
-  /** Root domain managed in Route 53, e.g. "samuel-lawrence.com" */
-  rootDomain: string;
-  /** Subdomain to attach, e.g. "api" → api.samuel-lawrence.com */
-  subdomain: string;
-}
+// Update these two constants to change the domain for all environments.
+const ROOT_DOMAIN = 'samuel-lawrence.com';
+const SUBDOMAIN = 'example'; // resolves to example.samuel-lawrence.com
 
 export interface ApiGatewayProps {
   handler: IFunction;
-  namePrefix: string;
-  customDomain?: CustomDomainConfig;
+  stage: string;
 }
 
 export class ApiGateway extends Construct {
@@ -26,51 +23,37 @@ export class ApiGateway extends Construct {
   constructor(scope: Construct, id: string, props: ApiGatewayProps) {
     super(scope, id);
 
-    const { handler, namePrefix, customDomain } = props;
+    const { handler, stage } = props;
+    const fqdn = `${SUBDOMAIN}.${ROOT_DOMAIN}`;
 
-    let defaultDomainMapping: { domainName: DomainName } | undefined;
+    const hostedZone = HostedZone.fromLookup(this, 'HostedZone', {
+      domainName: ROOT_DOMAIN,
+    });
 
-    if (customDomain) {
-      const fqdn = `${customDomain.subdomain}.${customDomain.rootDomain}`;
+    const certificate = new Certificate(this, 'Certificate', {
+      domainName: fqdn,
+      validation: CertificateValidation.fromDns(hostedZone),
+    });
 
-      // Looks up the hosted zone by root domain name.
-      // Requires the hosted zone to already exist in this AWS account.
-      const hostedZone = HostedZone.fromLookup(this, 'HostedZone', {
-        domainName: customDomain.rootDomain,
-      });
+    const apiDomain = new DomainName(this, 'DomainName', {
+      domainName: fqdn,
+      certificate,
+    });
 
-      const certificate = new Certificate(this, 'Certificate', {
-        domainName: fqdn,
-        validation: CertificateValidation.fromDns(hostedZone),
-      });
-
-      const apiDomain = new DomainName(this, 'DomainName', {
-        domainName: fqdn,
-        certificate,
-      });
-
-      new ARecord(this, 'AliasRecord', {
-        zone: hostedZone,
-        recordName: customDomain.subdomain,
-        target: RecordTarget.fromAlias(
-          new ApiGatewayv2DomainProperties(
-            apiDomain.regionalDomainName,
-            apiDomain.regionalHostedZoneId,
-          ),
+    new ARecord(this, 'AliasRecord', {
+      zone: hostedZone,
+      recordName: SUBDOMAIN,
+      target: RecordTarget.fromAlias(
+        new ApiGatewayv2DomainProperties(
+          apiDomain.regionalDomainName,
+          apiDomain.regionalHostedZoneId,
         ),
-      });
-
-      defaultDomainMapping = { domainName: apiDomain };
-
-      new CfnOutput(scope, 'CustomDomainUrl', {
-        value: `https://${fqdn}`,
-        description: 'Custom domain URL',
-      });
-    }
+      ),
+    });
 
     this.api = new HttpApi(this, 'HttpApi', {
-      apiName: `${namePrefix}-api`,
-      ...(defaultDomainMapping ? { defaultDomainMapping } : {}),
+      apiName: addStagePrefix(stage, 'api'),
+      defaultDomainMapping: { domainName: apiDomain },
     });
 
     this.api.addRoutes({
@@ -86,8 +69,8 @@ export class ApiGateway extends Construct {
     });
 
     new CfnOutput(scope, 'ApiUrl', {
-      value: this.api.url ?? '',
-      description: 'HTTP API endpoint URL',
+      value: `https://${fqdn}`,
+      description: 'API endpoint',
     });
   }
 }
