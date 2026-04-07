@@ -17,11 +17,9 @@ export class Storage extends Construct {
     const { stage, isProd } = props;
 
     this.bucket = new Bucket(this, 'Bucket', {
-      bucketName: addStagePrefix(stage, 'assets'),
+      bucketName: `${addStagePrefix(stage, 'template-bucket')}`,
       encryption: BucketEncryption.S3_MANAGED,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
-      versioned: isProd,
-      enforceSSL: true,
       removalPolicy: isProd ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
       autoDeleteObjects: !isProd,
     });
