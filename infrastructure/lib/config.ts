@@ -1,5 +1,6 @@
 export const config = {
   stackName: 'serverless-starter',
+  deploymentRegion: 'us-east-1',
 
   domain: {
     root: 'samuel-lawrence.com',

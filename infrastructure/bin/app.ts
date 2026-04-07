@@ -20,8 +20,8 @@ const stack = new ServerlessStack(app, stackId, {
   stackType,
   stage,
   env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION ?? 'eu-west-1',
+    account: process.env.CDK_DEFAULT_ACCOUNT ?? process.env.AWS_ACCOUNT_ID,
+    region: config.deploymentRegion,
   },
 });
 
