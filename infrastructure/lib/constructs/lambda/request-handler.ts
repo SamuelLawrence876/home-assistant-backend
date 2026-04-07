@@ -31,7 +31,7 @@ export class RequestHandler extends Construct {
       functionName: addStagePrefix(stage, 'request-handler'),
       runtime: Runtime.NODEJS_20_X,
       architecture: Architecture.ARM_64,
-      entry: path.join(__dirname, '../../../src/functions/requestHandler/index.ts'),
+      entry: path.join(__dirname, '../../../../src/functions/requestHandler/index.ts'),
       handler: 'handler',
       timeout: Duration.seconds(10),
       memorySize: 256,
