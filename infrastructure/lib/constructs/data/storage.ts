@@ -1,4 +1,4 @@
-import { RemovalPolicy } from 'aws-cdk-lib';
+import { RemovalPolicy, Stack } from 'aws-cdk-lib';
 import { BlockPublicAccess, Bucket, BucketEncryption } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 import { addStagePrefix } from '../../utils/naming';
@@ -17,7 +17,7 @@ export class Storage extends Construct {
     const { stage, isProd } = props;
 
     this.bucket = new Bucket(this, 'Bucket', {
-      bucketName: `${addStagePrefix(stage, 'template-bucket')}`,
+      bucketName: `${addStagePrefix(stage, 'template-bucket')}-${Stack.of(this).account}`,
       encryption: BucketEncryption.S3_MANAGED,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       removalPolicy: isProd ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,

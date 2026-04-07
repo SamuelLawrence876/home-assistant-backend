@@ -1,4 +1,4 @@
-import { CfnOutput, Duration, RemovalPolicy } from 'aws-cdk-lib';
+import { CfnOutput, Duration, RemovalPolicy, Stack } from 'aws-cdk-lib';
 import {
   AllowedMethods,
   CachePolicy,
@@ -44,7 +44,7 @@ export class Frontend extends Construct {
     });
 
     this.bucket = new Bucket(this, 'Bucket', {
-      bucketName: addStagePrefix(stage, 'frontend'),
+      bucketName: `${addStagePrefix(stage, 'frontend')}-${Stack.of(this).account}`,
       encryption: BucketEncryption.S3_MANAGED,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       removalPolicy: isProd ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
