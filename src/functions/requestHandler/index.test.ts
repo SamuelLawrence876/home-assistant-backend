@@ -1,4 +1,5 @@
 import type { APIGatewayProxyEventV2, Context } from 'aws-lambda';
+import type { ErrorResponse, HealthResponse } from '../../models';
 import { handler } from './index';
 
 const buildEvent = (path: string): APIGatewayProxyEventV2 =>
@@ -12,7 +13,7 @@ const buildEvent = (path: string): APIGatewayProxyEventV2 =>
     headers: {},
     isBase64Encoded: false,
     rawQueryString: '',
-  } as APIGatewayProxyEventV2);
+  }) as APIGatewayProxyEventV2;
 
 const mockContext: Context = {
   awsRequestId: 'test-request-id',
@@ -38,7 +39,7 @@ describe('requestHandler', () => {
 
   it('returns 200 with health status for /health', async () => {
     const result = await handler(buildEvent('/health'), mockContext);
-    const body = JSON.parse(result.body as string);
+    const body = JSON.parse(result.body as string) as HealthResponse;
 
     expect(result.statusCode).toBe(200);
     expect(body.status).toBe('healthy');
@@ -48,7 +49,7 @@ describe('requestHandler', () => {
 
   it('returns 404 for an unrecognised path', async () => {
     const result = await handler(buildEvent('/unknown'), mockContext);
-    const body = JSON.parse(result.body as string);
+    const body = JSON.parse(result.body as string) as ErrorResponse;
 
     expect(result.statusCode).toBe(404);
     expect(body.error).toBe('Not Found');

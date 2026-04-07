@@ -63,12 +63,12 @@ npx cdk deploy
 
 ### GitHub Actions workflows
 
-| Workflow | Trigger | What happens |
-|---|---|---|
-| `ci.yml` | Push to any branch, any PR | Lint, type-check, unit tests, infra tests |
-| `pr.yml` | PR opened / updated against `main` | Deploy **ephemeral stack** named `serverless-starter-{stage}` and post the URL as a PR comment |
-| `pr.yml` | PR closed (merged or abandoned) | **Destroy** the ephemeral stack automatically |
-| `deploy.yml` | Push to `main` or tag `v*` | Deploy **production stack** (`serverless-starter`, no stage suffix) |
+| Workflow     | Trigger                            | What happens                                                                                   |
+| ------------ | ---------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `ci.yml`     | Push to any branch, any PR         | Lint, type-check, unit tests, infra tests                                                      |
+| `pr.yml`     | PR opened / updated against `main` | Deploy **ephemeral stack** named `serverless-starter-{stage}` and post the URL as a PR comment |
+| `pr.yml`     | PR closed (merged or abandoned)    | **Destroy** the ephemeral stack automatically                                                  |
+| `deploy.yml` | Push to `main` or tag `v*`         | Deploy **production stack** (`serverless-starter`, no stage suffix)                            |
 
 ### Ephemeral environments
 
@@ -76,10 +76,10 @@ Every PR against `main` gets its own isolated AWS stack so you can test changes 
 
 **How the stage name is derived from the branch name:**
 
-| Branch | Derived stage |
-|---|---|
-| `feature/ABC-123-my-feature` | `abc-123` (ticket ID extracted) |
-| `fix/update-handler` | `fix-update-handler` (sanitised slug) |
+| Branch                        | Derived stage                             |
+| ----------------------------- | ----------------------------------------- |
+| `feature/ABC-123-my-feature`  | `abc-123` (ticket ID extracted)           |
+| `fix/update-handler`          | `fix-update-handler` (sanitised slug)     |
 | `dependabot/npm_and_yarn/...` | `dependabot-npm-and` (slug, max 20 chars) |
 
 The CDK stack is named `<STACK_BASE_NAME>-<stage>` (e.g. `serverless-starter-abc-123`).
@@ -102,8 +102,8 @@ Workflows use AWS OIDC — no long-lived access keys stored in GitHub.
 
 Create three **GitHub Environments** (`ephemeral`, `production`) and add this secret to each:
 
-| Secret | Description |
-|---|---|
+| Secret                | Description                                         |
+| --------------------- | --------------------------------------------------- |
 | `AWS_DEPLOY_ROLE_ARN` | ARN of the IAM role GitHub Actions assumes via OIDC |
 
 **Settings → Environments → [environment name] → Secrets**

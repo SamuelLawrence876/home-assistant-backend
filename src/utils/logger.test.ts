@@ -1,5 +1,20 @@
 import * as log from './logger';
 
+type LogRecord = {
+  level: string;
+  message?: string;
+  service?: string;
+  stage?: string;
+  timestamp?: string;
+  stack?: string;
+  correlationId?: string;
+  count?: number;
+  errorName?: string;
+  errorMessage?: string;
+  code?: string;
+  retries?: number;
+};
+
 describe('logger', () => {
   let consoleSpy: jest.SpyInstance;
 
@@ -10,7 +25,10 @@ describe('logger', () => {
     delete process.env.LOG_LEVEL;
   });
 
-  const lastRecord = () => JSON.parse(consoleSpy.mock.calls[0][0] as string);
+  const lastRecord = (): LogRecord => {
+    const calls = consoleSpy.mock.calls as string[][];
+    return JSON.parse(calls[0][0]) as LogRecord;
+  };
 
   describe('output shape', () => {
     it('writes structured JSON with required fields', () => {
@@ -32,6 +50,8 @@ describe('logger', () => {
     });
 
     it('all levels emit to console.log', () => {
+      process.env.LOG_LEVEL = 'DEBUG';
+
       log.debug('d');
       log.info('i');
       log.warn('w');

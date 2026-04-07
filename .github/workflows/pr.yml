@@ -10,12 +10,12 @@ on:
       - main
 
 permissions:
-  id-token: write     # OIDC credential exchange
+  id-token: write # OIDC credential exchange
   contents: read
   pull-requests: write # PR comment with stack URL
 
 env:
-  STACK_BASE_NAME: serverless-starter  # must match the default in infrastructure/bin/app.ts
+  STACK_BASE_NAME: serverless-starter # must match the default in infrastructure/bin/app.ts
 
 jobs:
   # ─────────────────────────────────────────────

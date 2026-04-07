@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 env:
-  STACK_BASE_NAME: serverless-starter  # must match the default in infrastructure/bin/app.ts
+  STACK_BASE_NAME: serverless-starter # must match the default in infrastructure/bin/app.ts
 
 jobs:
   deploy:

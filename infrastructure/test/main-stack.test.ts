@@ -9,6 +9,10 @@ describe('ServerlessStack', () => {
     const app = new App();
     const stack = new ServerlessStack(app, 'serverless-starter-test', {
       stage: 'test',
+      env: {
+        account: '123456789012',
+        region: 'eu-west-1',
+      },
     });
     template = Template.fromStack(stack);
   });

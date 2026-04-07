@@ -32,10 +32,7 @@ export const info = (message: string, extra?: Record<string, unknown>): void =>
 export const warn = (message: string, extra?: Record<string, unknown>): void =>
   emit('WARN', message, extra);
 
-export const error = (
-  message: string,
-  errorOrExtra?: Error | Record<string, unknown>,
-): void => {
+export const error = (message: string, errorOrExtra?: Error | Record<string, unknown>): void => {
   if (errorOrExtra instanceof Error) {
     emit('ERROR', message, {
       errorName: errorOrExtra.name,

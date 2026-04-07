@@ -24,6 +24,7 @@ const defaultRules = {
 };
 
 module.exports = {
+  ignorePatterns: ['.eslintrc.js'],
   parser: '@typescript-eslint/parser',
   plugins: ['import', 'jest', 'prettier'],
   extends: defaultExtends,
