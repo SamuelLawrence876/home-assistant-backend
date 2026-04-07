@@ -1,5 +1,5 @@
 import { CfnOutput } from 'aws-cdk-lib';
-import { DomainName, HttpApi, HttpMethod } from 'aws-cdk-lib/aws-apigatewayv2';
+import { DomainName, HttpApi, HttpMethod, IHttpRouteAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { Certificate, CertificateValidation } from 'aws-cdk-lib/aws-certificatemanager';
 import { IFunction } from 'aws-cdk-lib/aws-lambda';
@@ -13,6 +13,7 @@ export interface ApiGatewayProps {
   handler: IFunction;
   stage: string;
   isProd: boolean;
+  authorizer: IHttpRouteAuthorizer;
 }
 
 export class ApiGateway extends Construct {
@@ -21,7 +22,7 @@ export class ApiGateway extends Construct {
   constructor(scope: Construct, id: string, props: ApiGatewayProps) {
     super(scope, id);
 
-    const { handler, stage, isProd } = props;
+    const { handler, stage, isProd, authorizer } = props;
     const subdomain = isProd ? config.domain.api : `dev-${config.domain.api}`;
     const fqdn = `${subdomain}.${config.domain.root}`;
 
@@ -53,6 +54,7 @@ export class ApiGateway extends Construct {
     this.api = new HttpApi(this, 'HttpApi', {
       apiName: addStagePrefix(stage, 'api'),
       defaultDomainMapping: { domainName: apiDomain },
+      defaultAuthorizer: authorizer,
     });
 
     this.api.addRoutes({

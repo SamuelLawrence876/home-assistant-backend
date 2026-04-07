@@ -1,4 +1,5 @@
 import { Stack, StackProps } from 'aws-cdk-lib';
+import { IHttpRouteAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
@@ -33,19 +34,20 @@ export class ServerlessStack extends Stack {
       bucket: storage.bucket,
     });
 
-    const { api } = new ApiGateway(this, 'Api', { handler: requestHandler.fn, stage, isProd });
+    let authorizer: IHttpRouteAuthorizer;
 
     if (stackType === 'ephemeral') {
       const issuerUrl = StringParameter.valueForStringParameter(this, config.ssm.cognitoIssuerUrl);
       const clientId = StringParameter.valueForStringParameter(this, config.ssm.cognitoClientId);
-      const authorizer = new HttpJwtAuthorizer('JwtAuthorizer', issuerUrl, {
+      authorizer = new HttpJwtAuthorizer('JwtAuthorizer', issuerUrl, {
         jwtAudience: [clientId],
       });
-      api.addDefaultAuthorizer(authorizer);
     } else {
       const auth = new Auth(this, 'Auth', { stage, isProd });
-      api.addDefaultAuthorizer(auth.authorizer);
+      authorizer = auth.authorizer;
       new Frontend(this, 'Frontend', { stage, isProd });
     }
+
+    new ApiGateway(this, 'Api', { handler: requestHandler.fn, stage, isProd, authorizer });
   }
 }
