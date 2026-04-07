@@ -9,7 +9,7 @@ import {
   ViewerProtocolPolicy,
 } from 'aws-cdk-lib/aws-cloudfront';
 import { S3BucketOrigin } from 'aws-cdk-lib/aws-cloudfront-origins';
-import { DnsValidatedCertificate } from 'aws-cdk-lib/aws-certificatemanager';
+import { Certificate, CertificateValidation } from 'aws-cdk-lib/aws-certificatemanager';
 import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { CloudFrontTarget } from 'aws-cdk-lib/aws-route53-targets';
 import { BlockPublicAccess, Bucket, BucketEncryption } from 'aws-cdk-lib/aws-s3';
@@ -38,10 +38,9 @@ export class Frontend extends Construct {
       domainName: config.domain.root,
     });
 
-    const certificate = new DnsValidatedCertificate(this, 'Certificate', {
+    const certificate = new Certificate(this, 'Certificate', {
       domainName: fqdn,
-      hostedZone,
-      region: 'us-east-1',
+      validation: CertificateValidation.fromDns(hostedZone),
     });
 
     this.bucket = new Bucket(this, 'Bucket', {
