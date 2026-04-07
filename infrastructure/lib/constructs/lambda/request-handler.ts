@@ -6,7 +6,7 @@ import { IBucket } from 'aws-cdk-lib/aws-s3';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
 import * as path from 'path';
-import { addStagePrefix } from '../utils/naming';
+import { addStagePrefix } from '../../utils/naming';
 
 export interface RequestHandlerProps {
   stage: string;

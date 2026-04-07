@@ -6,15 +6,13 @@ import { IFunction } from 'aws-cdk-lib/aws-lambda';
 import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { ApiGatewayv2DomainProperties } from 'aws-cdk-lib/aws-route53-targets';
 import { Construct } from 'constructs';
-import { addStagePrefix } from '../utils/naming';
-
-// Update these two constants to change the domain for all environments.
-const ROOT_DOMAIN = 'samuel-lawrence.com';
-const SUBDOMAIN = 'example'; // resolves to example.samuel-lawrence.com
+import { config } from '../../config';
+import { addStagePrefix } from '../../utils/naming';
 
 export interface ApiGatewayProps {
   handler: IFunction;
   stage: string;
+  isProd: boolean;
 }
 
 export class ApiGateway extends Construct {
@@ -23,11 +21,12 @@ export class ApiGateway extends Construct {
   constructor(scope: Construct, id: string, props: ApiGatewayProps) {
     super(scope, id);
 
-    const { handler, stage } = props;
-    const fqdn = `${SUBDOMAIN}.${ROOT_DOMAIN}`;
+    const { handler, stage, isProd } = props;
+    const subdomain = isProd ? config.domain.api : `dev-${config.domain.api}`;
+    const fqdn = `${subdomain}.${config.domain.root}`;
 
     const hostedZone = HostedZone.fromLookup(this, 'HostedZone', {
-      domainName: ROOT_DOMAIN,
+      domainName: config.domain.root,
     });
 
     const certificate = new Certificate(this, 'Certificate', {
@@ -42,7 +41,7 @@ export class ApiGateway extends Construct {
 
     new ARecord(this, 'AliasRecord', {
       zone: hostedZone,
-      recordName: SUBDOMAIN,
+      recordName: subdomain,
       target: RecordTarget.fromAlias(
         new ApiGatewayv2DomainProperties(
           apiDomain.regionalDomainName,

@@ -89,6 +89,7 @@ jobs:
         run: |
           npx cdk deploy "$STACK_BASE_NAME-$STAGE" \
             --require-approval never \
+            -c stackType=ephemeral \
             -c stage="$STAGE" \
             --outputs-file cdk-outputs.json
 
@@ -175,4 +176,5 @@ jobs:
         run: |
           npx cdk destroy "$STACK_BASE_NAME-$STAGE" \
             --force \
+            -c stackType=ephemeral \
             -c stage="$STAGE"

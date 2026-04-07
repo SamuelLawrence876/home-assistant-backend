@@ -1,7 +1,7 @@
 import { RemovalPolicy } from 'aws-cdk-lib';
 import { BlockPublicAccess, Bucket, BucketEncryption } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
-import { addStagePrefix } from '../utils/naming';
+import { addStagePrefix } from '../../utils/naming';
 
 export interface StorageProps {
   stage: string;

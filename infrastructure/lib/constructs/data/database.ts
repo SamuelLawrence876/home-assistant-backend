@@ -1,7 +1,7 @@
 import { RemovalPolicy } from 'aws-cdk-lib';
 import { AttributeType, BillingMode, Table } from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
-import { addStagePrefix } from '../utils/naming';
+import { addStagePrefix } from '../../utils/naming';
 
 export interface DatabaseProps {
   stage: string;
