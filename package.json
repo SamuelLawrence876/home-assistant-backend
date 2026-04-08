@@ -18,7 +18,8 @@
     "test": "jest --maxWorkers=4",
     "test:update": "npm run test -- -u",
     "test:infra": "jest --config=jest.config.infra.js",
-    "test:infra:update": "npm run test:infra -- -u"
+    "test:infra:update": "npm run test:infra -- -u",
+    "test:acceptance": "jest --config=jest.config.acceptance.js"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.0.0",

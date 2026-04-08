@@ -17,6 +17,8 @@ jobs:
     name: Deploy — dev
     runs-on: ubuntu-latest
     environment: dev
+    outputs:
+      api-url: ${{ steps.outputs.outputs.api-url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -42,11 +44,37 @@ jobs:
         run: |
           npx cdk deploy "$STACK_BASE_NAME-dev" \
             --require-approval never \
-            -c stackType=dev
+            -c stackType=dev \
+            --outputs-file cdk-outputs.json
+
+      - name: Extract API URL
+        id: outputs
+        run: echo "api-url=$(jq -r '.[keys[0]].ApiUrl' cdk-outputs.json)" >> "$GITHUB_OUTPUT"
+
+  acceptance-test-dev:
+    name: Acceptance tests — dev
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run acceptance tests
+        run: npm run test:acceptance
+        env:
+          API_URL: ${{ needs.deploy-dev.outputs.api-url }}
 
   deploy-prod:
     name: Deploy — production
-    needs: deploy-dev
+    needs: acceptance-test-dev
     runs-on: ubuntu-latest
     environment: production
 

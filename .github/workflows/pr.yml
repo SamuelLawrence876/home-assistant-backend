@@ -93,6 +93,10 @@ jobs:
             -c stage="$STAGE" \
             --outputs-file cdk-outputs.json
 
+      - name: Extract API URL
+        id: outputs
+        run: echo "api-url=$(jq -r '.[keys[0]].ApiUrl' cdk-outputs.json)" >> "$GITHUB_OUTPUT"
+
       - name: Post API URL to PR
         uses: actions/github-script@v7
         with:
@@ -141,6 +145,11 @@ jobs:
                 body,
               });
             }
+
+      - name: Run acceptance tests
+        run: npm run test:acceptance
+        env:
+          API_URL: ${{ steps.outputs.outputs.api-url }}
 
   # ─────────────────────────────────────────────
   # Destroy the ephemeral stack when the PR closes
