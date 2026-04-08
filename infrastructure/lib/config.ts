@@ -6,7 +6,7 @@ export const config = {
     root: 'samuel-lawrence.com',
     api: 'example-api',
     app: 'example-app',
-    auth: 'example-auth',
+    auth: 'serverless-starter-auth',
   },
 
   ssm: {
