@@ -10,7 +10,7 @@ export const config = {
   },
 
   ssm: {
-    cognitoIssuerUrl: '/serverless-starter/dev/cognito/issuer-url',
-    cognitoClientId: '/serverless-starter/dev/cognito/client-id',
+    cognitoIssuerUrl: (stage: string) => `/serverless-starter/${stage}/cognito/issuer-url`,
+    cognitoClientId: (stage: string) => `/serverless-starter/${stage}/cognito/client-id`,
   },
 } as const;

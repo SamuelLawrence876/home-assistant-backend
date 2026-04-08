@@ -71,12 +71,12 @@ export class Auth extends Construct {
     });
 
     new StringParameter(this, 'IssuerUrlParam', {
-      parameterName: config.ssm.cognitoIssuerUrl,
+      parameterName: config.ssm.cognitoIssuerUrl(stage),
       stringValue: this.userPool.userPoolProviderUrl,
     });
 
     new StringParameter(this, 'ClientIdParam', {
-      parameterName: config.ssm.cognitoClientId,
+      parameterName: config.ssm.cognitoClientId(stage),
       stringValue: this.userPoolClient.userPoolClientId,
     });
   }

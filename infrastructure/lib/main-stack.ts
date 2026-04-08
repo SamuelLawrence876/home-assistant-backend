@@ -37,8 +37,8 @@ export class ServerlessStack extends Stack {
     let authorizer: IHttpRouteAuthorizer;
 
     if (stackType === 'ephemeral') {
-      const issuerUrl = StringParameter.valueForStringParameter(this, config.ssm.cognitoIssuerUrl);
-      const clientId = StringParameter.valueForStringParameter(this, config.ssm.cognitoClientId);
+      const issuerUrl = StringParameter.valueForStringParameter(this, config.ssm.cognitoIssuerUrl('dev'));
+      const clientId = StringParameter.valueForStringParameter(this, config.ssm.cognitoClientId('dev'));
       authorizer = new HttpJwtAuthorizer('JwtAuthorizer', issuerUrl, {
         jwtAudience: [clientId],
       });
