@@ -3,6 +3,7 @@ import {
   DomainName,
   HttpApi,
   HttpMethod,
+  HttpNoneAuthorizer,
   IHttpRouteAuthorizer,
 } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
@@ -66,6 +67,7 @@ export class ApiGateway extends Construct {
       path: '/health',
       methods: [HttpMethod.GET],
       integration: new HttpLambdaIntegration('HealthIntegration', handler),
+      authorizer: new HttpNoneAuthorizer(),
     });
 
     this.api.addRoutes({
