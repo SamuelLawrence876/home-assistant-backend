@@ -6,6 +6,7 @@ import { IBucket } from 'aws-cdk-lib/aws-s3';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
 import * as path from 'path';
+import { config } from '../../config';
 import { addStagePrefix } from '../../utils/naming';
 
 export interface RequestHandlerProps {
@@ -21,14 +22,15 @@ export class RequestHandler extends Construct {
     super(scope, id);
 
     const { stage, table, bucket } = props;
+    const baseName = `${config.stackName}-${addStagePrefix(stage, 'request-handler')}`;
 
     const dlq = new Queue(this, 'Dlq', {
-      queueName: addStagePrefix(stage, 'request-handler-dlq'),
+      queueName: `${baseName}-dlq`,
       retentionPeriod: Duration.days(14),
     });
 
     this.fn = new NodejsFunction(this, 'Function', {
-      functionName: addStagePrefix(stage, 'request-handler'),
+      functionName: baseName,
       runtime: Runtime.NODEJS_22_X,
       architecture: Architecture.ARM_64,
       entry: path.join(__dirname, '../../../../src/functions/requestHandler/index.ts'),
@@ -36,7 +38,7 @@ export class RequestHandler extends Construct {
       timeout: Duration.seconds(10),
       memorySize: 256,
       environment: {
-        SERVICE_NAME: addStagePrefix(stage, 'request-handler'),
+        SERVICE_NAME: baseName,
         STAGE: stage,
         TABLE_NAME: table.tableName,
         BUCKET_NAME: bucket.bucketName,
