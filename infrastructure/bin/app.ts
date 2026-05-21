@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { App, Tags } from 'aws-cdk-lib';
 import { config } from '../lib/config';
-import { ServerlessStack, StackType } from '../lib/main-stack';
+import { HomeAssistantStack, StackType } from '../lib/main-stack';
 
 const app = new App();
 
@@ -16,7 +16,7 @@ const stackId =
       ? `${config.stackName}-dev`
       : `${config.stackName}-${stage}`;
 
-const stack = new ServerlessStack(app, stackId, {
+const stack = new HomeAssistantStack(app, stackId, {
   stackType,
   stage,
   env: {

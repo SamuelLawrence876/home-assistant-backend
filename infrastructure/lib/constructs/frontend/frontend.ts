@@ -24,6 +24,7 @@ export interface FrontendProps {
 
 export class Frontend extends Construct {
   public readonly bucket: Bucket;
+
   public readonly distribution: Distribution;
 
   constructor(scope: Construct, id: string, props: FrontendProps) {

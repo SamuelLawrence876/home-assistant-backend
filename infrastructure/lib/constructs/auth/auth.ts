@@ -20,7 +20,9 @@ export interface AuthProps {
 
 export class Auth extends Construct {
   public readonly userPool: UserPool;
+
   public readonly userPoolClient: UserPoolClient;
+
   public readonly authorizer: HttpJwtAuthorizer;
 
   constructor(scope: Construct, id: string, props: AuthProps) {

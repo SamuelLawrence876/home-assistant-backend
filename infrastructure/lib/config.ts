@@ -1,16 +1,16 @@
 export const config = {
-  stackName: 'serverless-starter',
+  stackName: 'home-assistant',
   deploymentRegion: 'us-east-1',
 
   domain: {
     root: 'samuel-lawrence.com',
-    api: 'example-api',
-    app: 'example-app',
-    auth: 'serverless-starter-auth',
+    api: 'home-assistant-api',
+    app: 'home-assistant',
+    auth: 'home-assistant-auth',
   },
 
   ssm: {
-    cognitoIssuerUrl: (stage: string) => `/serverless-starter/${stage}/cognito/issuer-url`,
-    cognitoClientId: (stage: string) => `/serverless-starter/${stage}/cognito/client-id`,
+    cognitoIssuerUrl: (stage: string) => `/home-assistant/${stage}/cognito/issuer-url`,
+    cognitoClientId: (stage: string) => `/home-assistant/${stage}/cognito/client-id`,
   },
 } as const;

@@ -17,7 +17,7 @@ export class Database extends Construct {
     const { stage, isProd } = props;
 
     this.table = new Table(this, 'Table', {
-      tableName: addStagePrefix(stage, 'items'),
+      tableName: addStagePrefix(stage, 'devices'),
       partitionKey: { name: 'pk', type: AttributeType.STRING },
       sortKey: { name: 'sk', type: AttributeType.STRING },
       billingMode: BillingMode.PAY_PER_REQUEST,

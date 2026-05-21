@@ -1,7 +1,7 @@
 {
-  "name": "serverless-aws-template",
+  "name": "home-assistant-backend",
   "version": "0.1.0",
-  "description": "Production-ready AWS serverless starter using CDK v2 and TypeScript",
+  "description": "Home Assistant backend — AWS serverless API for managing smart-home devices, built with CDK v2 and TypeScript",
   "license": "MIT",
   "engines": {
     "node": "20",

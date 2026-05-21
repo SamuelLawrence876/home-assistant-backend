@@ -13,13 +13,13 @@ import { Frontend } from './constructs/frontend/frontend';
 
 export type StackType = 'prod' | 'dev' | 'ephemeral';
 
-export interface ServerlessStackProps extends StackProps {
+export interface HomeAssistantStackProps extends StackProps {
   stackType: StackType;
   stage: string;
 }
 
-export class ServerlessStack extends Stack {
-  constructor(scope: Construct, id: string, props: ServerlessStackProps) {
+export class HomeAssistantStack extends Stack {
+  constructor(scope: Construct, id: string, props: HomeAssistantStackProps) {
     super(scope, id, props);
 
     const { stackType, stage } = props;
@@ -37,8 +37,14 @@ export class ServerlessStack extends Stack {
     let authorizer: IHttpRouteAuthorizer;
 
     if (stackType === 'ephemeral') {
-      const issuerUrl = StringParameter.valueForStringParameter(this, config.ssm.cognitoIssuerUrl('dev'));
-      const clientId = StringParameter.valueForStringParameter(this, config.ssm.cognitoClientId('dev'));
+      const issuerUrl = StringParameter.valueForStringParameter(
+        this,
+        config.ssm.cognitoIssuerUrl('dev'),
+      );
+      const clientId = StringParameter.valueForStringParameter(
+        this,
+        config.ssm.cognitoClientId('dev'),
+      );
       authorizer = new HttpJwtAuthorizer('JwtAuthorizer', issuerUrl, {
         jwtAudience: [clientId],
       });

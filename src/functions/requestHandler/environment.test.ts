@@ -19,9 +19,9 @@ describe('getEnvironment', () => {
 
     const env = getEnvironment();
 
-    expect(env.serviceName).toBe('serverless-aws-template');
+    expect(env.serviceName).toBe('home-assistant-backend');
     expect(env.stage).toBe('local');
-    expect(env.tableName).toBe('items-table');
+    expect(env.tableName).toBe('devices-table');
     expect(env.bucketName).toBe('');
   });
 
