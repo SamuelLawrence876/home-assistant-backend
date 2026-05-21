@@ -4,7 +4,6 @@ type LogRecord = {
   level: string;
   message?: string;
   service?: string;
-  stage?: string;
   timestamp?: string;
   stack?: string;
   correlationId?: string;
@@ -21,7 +20,6 @@ describe('logger', () => {
   beforeEach(() => {
     consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
     process.env.SERVICE_NAME = 'test-svc';
-    process.env.STAGE = 'test';
     delete process.env.LOG_LEVEL;
   });
 
@@ -38,7 +36,6 @@ describe('logger', () => {
         level: 'INFO',
         message: 'hello world',
         service: 'test-svc',
-        stage: 'test',
       });
       expect(lastRecord().timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });

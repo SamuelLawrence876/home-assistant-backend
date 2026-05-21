@@ -4,31 +4,19 @@ Backend service for **Home Assistant** — an AWS serverless API for managing sm
 
 ## What's included
 
-- **Lambda function** with typed API Gateway v2 event handling for device commands (Node.js 22, ARM64)
-- **HTTP API** (API Gateway v2) with custom domain
-- **Cognito user pool** with hosted UI and JWT authorisation (production only)
-- **DynamoDB table** (`devices`) with PAY_PER_REQUEST billing
-- **S3 bucket** for device snapshots, firmware images, and event recordings
-- **CloudFront + S3** frontend distribution for the Home Assistant web UI (production only)
+- **Lambda function** (`home-assistant-request-handler`) with typed API Gateway v2 event handling for device commands (Node.js 22, ARM64)
+- **HTTP API** (API Gateway v2) at `home-assistant-api.samuel-lawrence.com` with JWT auth on everything except `/health`
+- **Cognito user pool** with hosted UI at `home-assistant-auth.auth.us-east-1.amazoncognito.com`
+- **DynamoDB table** (`home-assistant-devices`) with PAY_PER_REQUEST billing
+- **S3 bucket** (`home-assistant-storage`) for device snapshots, firmware, recordings
+- **CloudFront + S3** frontend distribution at `home-assistant.samuel-lawrence.com`
 - **Dead letter queue** for failed Lambda invocations
 - **CDK v2 stack** with `NodejsFunction` (esbuild bundling)
-- **GitHub Actions** CI/CD — lint/test on PRs, single prod deploy on merge to `main`
-- **Ephemeral PR stacks** — isolated API-only environment per PR, torn down on close
+- **GitHub Actions** CI/CD — lint/test on PRs, single deploy on merge to `main`
 - **Jest** unit tests with AWS SDK mocking
 - **ESLint 9 (flat config) + Prettier** + TypeScript
 
-Every resource is configured with `RemovalPolicy.DESTROY` and `autoDeleteObjects: true` — the whole stack can be torn down without manual cleanup.
-
-## Stack types
-
-Two stack types only:
-
-| Type        | Use                | Contents                                               | Auth |
-| ----------- | ------------------ | ------------------------------------------------------ | ---- |
-| `prod`      | Production deploy  | API + Lambda + DB + Storage + Cognito + Frontend (CDN) | JWT  |
-| `ephemeral` | Per-PR preview env | API + Lambda + DB + Storage (no Cognito, no Frontend)  | None |
-
-Ephemeral stacks are intentionally minimal — they exist for smoke-testing API changes on a PR. They expose `https://{stage}-home-assistant-api.samuel-lawrence.com` with no authentication.
+Every resource uses `RemovalPolicy.DESTROY` and `autoDeleteObjects: true` — the whole stack can be torn down with `cdk destroy` without manual cleanup.
 
 ## Getting started
 
@@ -52,23 +40,23 @@ Ensure your AWS credentials are configured, then:
 
 ```bash
 npx cdk bootstrap     # first time only
-npx cdk deploy        # deploys the prod stack
+npx cdk deploy
 ```
 
 ## Project structure
 
 ```
 ├── infrastructure/
-│   ├── bin/app.ts                       # CDK entry point — resolves stack type and stage
+│   ├── bin/app.ts                       # CDK entry point
 │   └── lib/
 │       ├── config.ts                    # Stack name, region, domain
 │       ├── main-stack.ts                # HomeAssistantStack definition
 │       └── constructs/
-│           ├── api/api-gateway.ts       # HTTP API v2, custom domain, optional JWT authoriser
-│           ├── auth/auth.ts             # Cognito user pool + hosted UI (prod only)
+│           ├── api/api-gateway.ts       # HTTP API v2, custom domain, JWT authoriser
+│           ├── auth/auth.ts             # Cognito user pool + hosted UI
 │           ├── data/database.ts         # DynamoDB devices table
 │           ├── data/storage.ts          # S3 bucket for device media
-│           ├── frontend/frontend.ts     # CloudFront + S3 + custom domain (prod only)
+│           ├── frontend/frontend.ts     # CloudFront + S3 + custom domain
 │           └── lambda/request-handler.ts# NodejsFunction, DLQ, env vars, IAM grants
 ├── src/
 │   ├── functions/
@@ -82,49 +70,12 @@ npx cdk deploy        # deploys the prod stack
 
 ## CI/CD
 
-### GitHub Actions workflows
+| Workflow     | Trigger                          | What happens                              |
+| ------------ | -------------------------------- | ----------------------------------------- |
+| `ci.yml`     | Push to any branch, PR to `main` | Lint, type-check, unit tests              |
+| `deploy.yml` | Push to `main`                   | Deploy the stack and run acceptance tests |
 
-| Workflow     | Trigger                            | What happens                                                                               |
-| ------------ | ---------------------------------- | ------------------------------------------------------------------------------------------ |
-| `ci.yml`     | Push to any branch, PR to `main`   | Lint, type-check, unit tests                                                               |
-| `pr.yml`     | PR opened / updated against `main` | Deploy **ephemeral stack** named `home-assistant-{stage}` and post the URL as a PR comment |
-| `pr.yml`     | PR closed (merged or abandoned)    | **Destroy** the ephemeral stack automatically                                              |
-| `deploy.yml` | Push to `main`                     | Deploy production stack and run acceptance tests                                           |
-
-### Ephemeral environments
-
-Every PR against `main` gets its own isolated AWS stack so you can smoke-test API changes end-to-end before merging.
-
-**How the stage name is derived from the branch name:**
-
-| Branch                        | Derived stage                             |
-| ----------------------------- | ----------------------------------------- |
-| `feature/ABC-123-my-feature`  | `abc-123` (ticket ID extracted)           |
-| `fix/update-handler`          | `fix-update-handler` (sanitised slug)     |
-| `dependabot/npm_and_yarn/...` | `dependabot-npm-and` (slug, max 20 chars) |
-
-The CDK stack is named `<stackName>-<stage>` (e.g. `home-assistant-abc-123`).
-
-To deploy or destroy an ephemeral stack manually:
-
-```bash
-npx cdk deploy home-assistant-abc-123 --require-approval never -c stackType=ephemeral -c stage=abc-123
-npx cdk destroy home-assistant-abc-123 --force -c stackType=ephemeral -c stage=abc-123
-```
-
-### Required GitHub secrets and environments
-
-Workflows use AWS OIDC — no long-lived access keys are stored in GitHub.
-
-Create two **GitHub Environments** (`ephemeral`, `production`) and add this secret to each:
-
-| Secret                | Description                                         |
-| --------------------- | --------------------------------------------------- |
-| `AWS_DEPLOY_ROLE_ARN` | ARN of the IAM role GitHub Actions assumes via OIDC |
-
-**Settings → Environments → [environment name] → Secrets**
-
-The IAM role trust policy must allow `token.actions.githubusercontent.com` as the OIDC provider. See the [AWS docs](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html) for setup.
+Workflows use AWS OIDC — no long-lived access keys. The `production` GitHub Environment must have an `AWS_DEPLOY_ROLE_ARN` secret pointing at an IAM role with a trust policy allowing `token.actions.githubusercontent.com` for this repo.
 
 ## Adding a new Lambda function
 

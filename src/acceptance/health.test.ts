@@ -23,10 +23,8 @@ describe('GET /health', () => {
     expect(body.status).toBe('healthy');
   });
 
-  it('includes service name and stage', () => {
+  it('includes service name', () => {
     expect(typeof body.service).toBe('string');
     expect(body.service.length).toBeGreaterThan(0);
-    expect(typeof body.stage).toBe('string');
-    expect(body.stage.length).toBeGreaterThan(0);
   });
 });

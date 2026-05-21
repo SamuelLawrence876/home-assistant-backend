@@ -1,7 +1,6 @@
 export interface HealthResponse {
   status: 'healthy' | 'unhealthy';
   service: string;
-  stage: string;
 }
 
 export interface ErrorResponse {

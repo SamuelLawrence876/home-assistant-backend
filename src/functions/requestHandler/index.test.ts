@@ -33,7 +33,6 @@ const mockContext: Context = {
 describe('requestHandler', () => {
   beforeEach(() => {
     process.env.SERVICE_NAME = 'test-service';
-    process.env.STAGE = 'test';
     jest.spyOn(console, 'log').mockImplementation(() => {});
   });
 
@@ -44,7 +43,6 @@ describe('requestHandler', () => {
     expect(result.statusCode).toBe(200);
     expect(body.status).toBe('healthy');
     expect(body.service).toBe('test-service');
-    expect(body.stage).toBe('test');
   });
 
   it('returns 404 for an unrecognised path', async () => {

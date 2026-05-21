@@ -17,7 +17,7 @@ export const handler = (
   event: APIGatewayProxyEventV2,
   context: Context,
 ): Promise<APIGatewayProxyStructuredResultV2> => {
-  const { serviceName, stage } = getEnvironment();
+  const { serviceName } = getEnvironment();
 
   log.info('request received', {
     requestId: context.awsRequestId,
@@ -26,7 +26,7 @@ export const handler = (
   });
 
   if (event.rawPath === '/health') {
-    const body: HealthResponse = { status: 'healthy', service: serviceName, stage };
+    const body: HealthResponse = { status: 'healthy', service: serviceName };
     return Promise.resolve(json(200, body));
   }
 

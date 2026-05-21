@@ -7,44 +7,23 @@ import { Database } from './constructs/data/database';
 import { Storage } from './constructs/data/storage';
 import { Frontend } from './constructs/frontend/frontend';
 
-export type StackType = 'prod' | 'ephemeral';
-
-export interface HomeAssistantStackProps extends StackProps {
-  stackType: StackType;
-  stage: string;
-}
-
 export class HomeAssistantStack extends Stack {
-  constructor(scope: Construct, id: string, props: HomeAssistantStackProps) {
+  constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    const { stackType, stage } = props;
-    const isProd = stackType === 'prod';
-
-    const database = new Database(this, 'Database', { stage });
-    const storage = new Storage(this, 'Storage', { stage });
+    const database = new Database(this, 'Database');
+    const storage = new Storage(this, 'Storage');
 
     const requestHandler = new RequestHandler(this, 'RequestHandler', {
-      stage,
       table: database.table,
       bucket: storage.bucket,
     });
 
-    if (isProd) {
-      const auth = new Auth(this, 'Auth', { stage });
-      new Frontend(this, 'Frontend', { stage });
-      new ApiGateway(this, 'Api', {
-        handler: requestHandler.fn,
-        stage,
-        isProd: true,
-        authorizer: auth.authorizer,
-      });
-    } else {
-      new ApiGateway(this, 'Api', {
-        handler: requestHandler.fn,
-        stage,
-        isProd: false,
-      });
-    }
+    const auth = new Auth(this, 'Auth');
+    new Frontend(this, 'Frontend');
+    new ApiGateway(this, 'Api', {
+      handler: requestHandler.fn,
+      authorizer: auth.authorizer,
+    });
   }
 }

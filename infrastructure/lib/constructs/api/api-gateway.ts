@@ -13,13 +13,10 @@ import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { ApiGatewayv2DomainProperties } from 'aws-cdk-lib/aws-route53-targets';
 import { Construct } from 'constructs';
 import { config } from '../../config';
-import { addStagePrefix } from '../../utils/naming';
 
 export interface ApiGatewayProps {
   handler: IFunction;
-  stage: string;
-  isProd: boolean;
-  authorizer?: IHttpRouteAuthorizer;
+  authorizer: IHttpRouteAuthorizer;
 }
 
 export class ApiGateway extends Construct {
@@ -28,9 +25,8 @@ export class ApiGateway extends Construct {
   constructor(scope: Construct, id: string, props: ApiGatewayProps) {
     super(scope, id);
 
-    const { handler, stage, isProd, authorizer } = props;
-    const subdomain = isProd ? config.domain.api : `${stage}-${config.domain.api}`;
-    const fqdn = `${subdomain}.${config.domain.root}`;
+    const { handler, authorizer } = props;
+    const fqdn = `${config.domain.api}.${config.domain.root}`;
 
     const hostedZone = HostedZone.fromLookup(this, 'HostedZone', {
       domainName: config.domain.root,
@@ -48,7 +44,7 @@ export class ApiGateway extends Construct {
 
     new ARecord(this, 'AliasRecord', {
       zone: hostedZone,
-      recordName: subdomain,
+      recordName: config.domain.api,
       target: RecordTarget.fromAlias(
         new ApiGatewayv2DomainProperties(
           apiDomain.regionalDomainName,
@@ -58,7 +54,7 @@ export class ApiGateway extends Construct {
     });
 
     this.api = new HttpApi(this, 'HttpApi', {
-      apiName: addStagePrefix(stage, 'api'),
+      apiName: `${config.stackName}-api`,
       defaultDomainMapping: { domainName: apiDomain },
       defaultAuthorizer: authorizer,
     });

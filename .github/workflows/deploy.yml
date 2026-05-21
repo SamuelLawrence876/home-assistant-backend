@@ -42,7 +42,6 @@ jobs:
         run: |
           npx cdk deploy "$STACK_BASE_NAME" \
             --require-approval never \
-            -c stackType=prod \
             --outputs-file cdk-outputs.json
 
       - name: Extract API URL

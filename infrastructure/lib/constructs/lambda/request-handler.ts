@@ -7,10 +7,8 @@ import { Queue } from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
 import * as path from 'path';
 import { config } from '../../config';
-import { addStagePrefix } from '../../utils/naming';
 
 export interface RequestHandlerProps {
-  stage: string;
   table: ITable;
   bucket: IBucket;
 }
@@ -21,16 +19,16 @@ export class RequestHandler extends Construct {
   constructor(scope: Construct, id: string, props: RequestHandlerProps) {
     super(scope, id);
 
-    const { stage, table, bucket } = props;
-    const baseName = `${config.stackName}-${addStagePrefix(stage, 'request-handler')}`;
+    const { table, bucket } = props;
+    const functionName = `${config.stackName}-request-handler`;
 
     const dlq = new Queue(this, 'Dlq', {
-      queueName: `${baseName}-dlq`,
+      queueName: `${functionName}-dlq`,
       retentionPeriod: Duration.days(14),
     });
 
     this.fn = new NodejsFunction(this, 'Function', {
-      functionName: baseName,
+      functionName,
       runtime: Runtime.NODEJS_22_X,
       architecture: Architecture.ARM_64,
       entry: path.join(__dirname, '../../../../src/functions/requestHandler/index.ts'),
@@ -38,8 +36,7 @@ export class RequestHandler extends Construct {
       timeout: Duration.seconds(10),
       memorySize: 256,
       environment: {
-        SERVICE_NAME: baseName,
-        STAGE: stage,
+        SERVICE_NAME: functionName,
         TABLE_NAME: table.tableName,
         BUCKET_NAME: bucket.bucketName,
       },

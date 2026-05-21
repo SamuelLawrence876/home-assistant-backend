@@ -16,7 +16,6 @@ const emit = (level: LogLevel, message: string, extra?: Record<string, unknown>)
       level,
       message,
       service: process.env.SERVICE_NAME ?? 'unknown',
-      stage: process.env.STAGE ?? 'local',
       ...extra,
     }),
   );

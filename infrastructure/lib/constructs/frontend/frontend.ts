@@ -15,21 +15,14 @@ import { CloudFrontTarget } from 'aws-cdk-lib/aws-route53-targets';
 import { BlockPublicAccess, Bucket, BucketEncryption } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 import { config } from '../../config';
-import { addStagePrefix } from '../../utils/naming';
-
-export interface FrontendProps {
-  stage: string;
-}
 
 export class Frontend extends Construct {
   public readonly bucket: Bucket;
 
   public readonly distribution: Distribution;
 
-  constructor(scope: Construct, id: string, props: FrontendProps) {
+  constructor(scope: Construct, id: string) {
     super(scope, id);
-
-    const { stage } = props;
 
     const fqdn = `${config.domain.app}.${config.domain.root}`;
 
@@ -43,7 +36,7 @@ export class Frontend extends Construct {
     });
 
     this.bucket = new Bucket(this, 'Bucket', {
-      bucketName: `${config.stackName}-${addStagePrefix(stage, 'frontend')}`,
+      bucketName: `${config.stackName}-frontend`,
       encryption: BucketEncryption.S3_MANAGED,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       removalPolicy: RemovalPolicy.DESTROY,
@@ -51,7 +44,7 @@ export class Frontend extends Construct {
     });
 
     this.distribution = new Distribution(this, 'Distribution', {
-      comment: addStagePrefix(stage, 'frontend'),
+      comment: `${config.stackName}-frontend`,
       domainNames: [fqdn],
       certificate,
       defaultRootObject: 'index.html',

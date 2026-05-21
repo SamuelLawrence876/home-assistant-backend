@@ -10,11 +10,6 @@ import {
 } from 'aws-cdk-lib/aws-cognito';
 import { Construct } from 'constructs';
 import { config } from '../../config';
-import { addStagePrefix } from '../../utils/naming';
-
-export interface AuthProps {
-  stage: string;
-}
 
 export class Auth extends Construct {
   public readonly userPool: UserPool;
@@ -23,13 +18,11 @@ export class Auth extends Construct {
 
   public readonly authorizer: HttpJwtAuthorizer;
 
-  constructor(scope: Construct, id: string, props: AuthProps) {
+  constructor(scope: Construct, id: string) {
     super(scope, id);
 
-    const { stage } = props;
-
     this.userPool = new UserPool(this, 'UserPool', {
-      userPoolName: addStagePrefix(stage, 'user-pool'),
+      userPoolName: `${config.stackName}-user-pool`,
       selfSignUpEnabled: true,
       signInAliases: { email: true },
       autoVerify: { email: true },
@@ -51,7 +44,7 @@ export class Auth extends Construct {
     });
 
     this.userPoolClient = this.userPool.addClient('WebClient', {
-      userPoolClientName: addStagePrefix(stage, 'web-client'),
+      userPoolClientName: `${config.stackName}-web-client`,
       authFlows: { userSrp: true },
       oAuth: {
         scopes: [OAuthScope.OPENID, OAuthScope.EMAIL, OAuthScope.PROFILE],
@@ -64,7 +57,7 @@ export class Auth extends Construct {
     });
 
     this.authorizer = new HttpJwtAuthorizer('JwtAuthorizer', this.userPool.userPoolProviderUrl, {
-      authorizerName: addStagePrefix(stage, 'jwt-authorizer'),
+      authorizerName: `${config.stackName}-jwt-authorizer`,
       jwtAudience: [this.userPoolClient.userPoolClientId],
     });
   }
