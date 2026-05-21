@@ -13,7 +13,9 @@ import { Certificate, CertificateValidation } from 'aws-cdk-lib/aws-certificatem
 import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { CloudFrontTarget } from 'aws-cdk-lib/aws-route53-targets';
 import { BlockPublicAccess, Bucket, BucketEncryption } from 'aws-cdk-lib/aws-s3';
+import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
+import * as path from 'path';
 import { config } from '../../config';
 
 export class Frontend extends Construct {
@@ -77,6 +79,16 @@ export class Frontend extends Construct {
       zone: hostedZone,
       recordName: config.domain.app,
       target: RecordTarget.fromAlias(new CloudFrontTarget(this.distribution)),
+    });
+
+    // Uploads ui/dist to S3 and invalidates CloudFront on every deploy.
+    // The dist directory must exist at synth time — run `npm run build` in ui/ first.
+    new BucketDeployment(this, 'DeployFrontend', {
+      sources: [Source.asset(path.join(__dirname, '../../../../../ui/dist'))],
+      destinationBucket: this.bucket,
+      distribution: this.distribution,
+      distributionPaths: ['/*'],
+      prune: true,
     });
 
     new CfnOutput(scope, 'FrontendUrl', {
