@@ -10,7 +10,6 @@ const minLevel = (): number => {
 const emit = (level: LogLevel, message: string, extra?: Record<string, unknown>): void => {
   if (LEVEL_RANK[level] < minLevel()) return;
 
-  // eslint-disable-next-line no-console
   console.log(
     JSON.stringify({
       timestamp: new Date().toISOString(),

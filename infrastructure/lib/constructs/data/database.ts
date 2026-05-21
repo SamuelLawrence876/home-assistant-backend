@@ -5,7 +5,6 @@ import { addStagePrefix } from '../../utils/naming';
 
 export interface DatabaseProps {
   stage: string;
-  isProd: boolean;
 }
 
 export class Database extends Construct {
@@ -14,7 +13,7 @@ export class Database extends Construct {
   constructor(scope: Construct, id: string, props: DatabaseProps) {
     super(scope, id);
 
-    const { stage, isProd } = props;
+    const { stage } = props;
 
     this.table = new Table(this, 'Table', {
       tableName: addStagePrefix(stage, 'devices'),
@@ -22,7 +21,7 @@ export class Database extends Construct {
       sortKey: { name: 'sk', type: AttributeType.STRING },
       billingMode: BillingMode.PAY_PER_REQUEST,
       pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: false },
-      removalPolicy: isProd ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      removalPolicy: RemovalPolicy.DESTROY,
     });
   }
 }

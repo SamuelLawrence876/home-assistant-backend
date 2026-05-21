@@ -19,7 +19,6 @@ import { addStagePrefix } from '../../utils/naming';
 
 export interface FrontendProps {
   stage: string;
-  isProd: boolean;
 }
 
 export class Frontend extends Construct {
@@ -30,10 +29,9 @@ export class Frontend extends Construct {
   constructor(scope: Construct, id: string, props: FrontendProps) {
     super(scope, id);
 
-    const { stage, isProd } = props;
+    const { stage } = props;
 
-    const subdomain = isProd ? config.domain.app : `dev-${config.domain.app}`;
-    const fqdn = `${subdomain}.${config.domain.root}`;
+    const fqdn = `${config.domain.app}.${config.domain.root}`;
 
     const hostedZone = HostedZone.fromLookup(this, 'HostedZone', {
       domainName: config.domain.root,
@@ -48,8 +46,8 @@ export class Frontend extends Construct {
       bucketName: `${config.stackName}-${addStagePrefix(stage, 'frontend')}`,
       encryption: BucketEncryption.S3_MANAGED,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
-      removalPolicy: isProd ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
-      autoDeleteObjects: !isProd,
+      removalPolicy: RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
     });
 
     this.distribution = new Distribution(this, 'Distribution', {
@@ -58,7 +56,7 @@ export class Frontend extends Construct {
       certificate,
       defaultRootObject: 'index.html',
       httpVersion: HttpVersion.HTTP2_AND_3,
-      priceClass: isProd ? PriceClass.PRICE_CLASS_ALL : PriceClass.PRICE_CLASS_100,
+      priceClass: PriceClass.PRICE_CLASS_ALL,
       minimumProtocolVersion: SecurityPolicyProtocol.TLS_V1_2_2021,
       defaultBehavior: {
         origin: S3BucketOrigin.withOriginAccessControl(this.bucket),
@@ -84,7 +82,7 @@ export class Frontend extends Construct {
 
     new ARecord(this, 'AliasRecord', {
       zone: hostedZone,
-      recordName: subdomain,
+      recordName: config.domain.app,
       target: RecordTarget.fromAlias(new CloudFrontTarget(this.distribution)),
     });
 

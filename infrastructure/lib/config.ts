@@ -8,9 +8,4 @@ export const config = {
     app: 'home-assistant',
     auth: 'home-assistant-auth',
   },
-
-  ssm: {
-    cognitoIssuerUrl: (stage: string) => `/home-assistant/${stage}/cognito/issuer-url`,
-    cognitoClientId: (stage: string) => `/home-assistant/${stage}/cognito/client-id`,
-  },
 } as const;

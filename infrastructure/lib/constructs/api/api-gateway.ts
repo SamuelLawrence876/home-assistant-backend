@@ -18,7 +18,7 @@ export interface ApiGatewayProps {
   handler: IFunction;
   stage: string;
   isProd: boolean;
-  authorizer: IHttpRouteAuthorizer;
+  authorizer?: IHttpRouteAuthorizer;
 }
 
 export class ApiGateway extends Construct {
@@ -28,7 +28,7 @@ export class ApiGateway extends Construct {
     super(scope, id);
 
     const { handler, stage, isProd, authorizer } = props;
-    const subdomain = isProd ? config.domain.api : `dev-${config.domain.api}`;
+    const subdomain = isProd ? config.domain.api : `${stage}-${config.domain.api}`;
     const fqdn = `${subdomain}.${config.domain.root}`;
 
     const hostedZone = HostedZone.fromLookup(this, 'HostedZone', {

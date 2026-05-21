@@ -6,7 +6,6 @@ import { addStagePrefix } from '../../utils/naming';
 
 export interface StorageProps {
   stage: string;
-  isProd: boolean;
 }
 
 export class Storage extends Construct {
@@ -15,14 +14,14 @@ export class Storage extends Construct {
   constructor(scope: Construct, id: string, props: StorageProps) {
     super(scope, id);
 
-    const { stage, isProd } = props;
+    const { stage } = props;
 
     this.bucket = new Bucket(this, 'Bucket', {
       bucketName: `${config.stackName}-${addStagePrefix(stage, 'storage')}`,
       encryption: BucketEncryption.S3_MANAGED,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
-      removalPolicy: isProd ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
-      autoDeleteObjects: !isProd,
+      removalPolicy: RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
     });
   }
 }

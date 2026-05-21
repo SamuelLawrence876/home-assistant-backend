@@ -8,14 +8,12 @@ import {
   UserPoolDomain,
   UserPoolEmail,
 } from 'aws-cdk-lib/aws-cognito';
-import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import { config } from '../../config';
 import { addStagePrefix } from '../../utils/naming';
 
 export interface AuthProps {
   stage: string;
-  isProd: boolean;
 }
 
 export class Auth extends Construct {
@@ -28,9 +26,7 @@ export class Auth extends Construct {
   constructor(scope: Construct, id: string, props: AuthProps) {
     super(scope, id);
 
-    const { stage, isProd } = props;
-
-    const authSubdomain = isProd ? config.domain.auth : `dev-${config.domain.auth}`;
+    const { stage } = props;
 
     this.userPool = new UserPool(this, 'UserPool', {
       userPoolName: addStagePrefix(stage, 'user-pool'),
@@ -47,11 +43,11 @@ export class Auth extends Construct {
         requireSymbols: false,
         tempPasswordValidity: Duration.days(7),
       },
-      removalPolicy: isProd ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      removalPolicy: RemovalPolicy.DESTROY,
     });
 
     const cognitoDomain: UserPoolDomain = this.userPool.addDomain('HostedDomain', {
-      cognitoDomain: { domainPrefix: authSubdomain },
+      cognitoDomain: { domainPrefix: config.domain.auth },
     });
 
     this.userPoolClient = this.userPool.addClient('WebClient', {
@@ -70,16 +66,6 @@ export class Auth extends Construct {
     this.authorizer = new HttpJwtAuthorizer('JwtAuthorizer', this.userPool.userPoolProviderUrl, {
       authorizerName: addStagePrefix(stage, 'jwt-authorizer'),
       jwtAudience: [this.userPoolClient.userPoolClientId],
-    });
-
-    new StringParameter(this, 'IssuerUrlParam', {
-      parameterName: config.ssm.cognitoIssuerUrl(stage),
-      stringValue: this.userPool.userPoolProviderUrl,
-    });
-
-    new StringParameter(this, 'ClientIdParam', {
-      parameterName: config.ssm.cognitoClientId(stage),
-      stringValue: this.userPoolClient.userPoolClientId,
     });
   }
 }

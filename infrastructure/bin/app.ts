@@ -8,13 +8,8 @@ const app = new App();
 const stackType = (app.node.tryGetContext('stackType') as StackType | undefined) ?? 'prod';
 const branchStage = app.node.tryGetContext('stage') as string | undefined;
 
-const stage = stackType === 'prod' ? 'production' : stackType === 'dev' ? 'dev' : branchStage!;
-const stackId =
-  stackType === 'prod'
-    ? config.stackName
-    : stackType === 'dev'
-      ? `${config.stackName}-dev`
-      : `${config.stackName}-${stage}`;
+const stage = stackType === 'prod' ? 'production' : branchStage!;
+const stackId = stackType === 'prod' ? config.stackName : `${config.stackName}-${stage}`;
 
 const stack = new HomeAssistantStack(app, stackId, {
   stackType,

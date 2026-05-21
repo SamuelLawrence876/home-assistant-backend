@@ -29,7 +29,7 @@ export class RequestHandler extends Construct {
 
     this.fn = new NodejsFunction(this, 'Function', {
       functionName: addStagePrefix(stage, 'request-handler'),
-      runtime: Runtime.NODEJS_20_X,
+      runtime: Runtime.NODEJS_22_X,
       architecture: Architecture.ARM_64,
       entry: path.join(__dirname, '../../../../src/functions/requestHandler/index.ts'),
       handler: 'handler',
