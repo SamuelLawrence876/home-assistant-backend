@@ -6,6 +6,7 @@ import { RequestHandler } from './constructs/lambda/request-handler';
 import { Database } from './constructs/data/database';
 import { Storage } from './constructs/data/storage';
 import { Frontend } from './constructs/frontend/frontend';
+import { HaProxy } from './constructs/ha-proxy/ha-proxy';
 
 export class HomeAssistantStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -21,6 +22,7 @@ export class HomeAssistantStack extends Stack {
 
     const auth = new Auth(this, 'Auth');
     new Frontend(this, 'Frontend');
+    new HaProxy(this, 'HaProxy');
     new ApiGateway(this, 'Api', {
       handler: requestHandler.fn,
       authorizer: auth.authorizer,

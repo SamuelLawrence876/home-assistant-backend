@@ -7,5 +7,10 @@ export const config = {
     api: 'home-assistant-api',
     app: 'home-assistant',
     auth: 'home-assistant-auth',
+    ha: 'ha',
+  },
+
+  tailscale: {
+    funnelHost: 'sam.taile7763b.ts.net',
   },
 } as const;
