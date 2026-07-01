@@ -6,7 +6,6 @@ import { RequestHandler } from './constructs/lambda/request-handler';
 import { Database } from './constructs/data/database';
 import { Storage } from './constructs/data/storage';
 import { Frontend } from './constructs/frontend/frontend';
-import { HaProxy } from './constructs/ha-proxy/ha-proxy';
 
 export class HomeAssistantStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -22,7 +21,9 @@ export class HomeAssistantStack extends Stack {
 
     const auth = new Auth(this, 'Auth');
     new Frontend(this, 'Frontend');
-    new HaProxy(this, 'HaProxy');
+    // HaProxy (ha.samuel-lawrence.com CloudFront -> Tailscale Funnel) retired 2026-07-01:
+    // the Glasshouse UI now hits the Funnel (sam.taile7763b.ts.net) directly, so this
+    // per-request-billed CloudFront proxy (~$14/mo) is no longer needed.
     new ApiGateway(this, 'Api', {
       handler: requestHandler.fn,
       authorizer: auth.authorizer,
