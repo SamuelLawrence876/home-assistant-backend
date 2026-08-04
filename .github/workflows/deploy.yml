@@ -9,6 +9,19 @@ permissions:
   id-token: write
   contents: read
 
+# One deploy at a time. Two merges close together otherwise race: the second
+# `cdk deploy` hits a stack that is already UPDATE_IN_PROGRESS and fails, or the
+# older commit's run finishes last and its template wins.
+#
+# cancel-in-progress is deliberately false. Cancelling the GitHub job does NOT
+# stop the CloudFormation update it kicked off — it just stops watching, leaving
+# the stack mid-update and the next run failing on arrival. Queueing is the safe
+# shape here, and it still ends on the newest commit: GitHub keeps only one
+# pending run per group and cancels older pending ones as newer pushes land.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
 env:
   STACK_BASE_NAME: home-assistant
 
