@@ -30,6 +30,8 @@ export default tseslint.config(
       ...jest.configs['flat/recommended'].rules,
       '@typescript-eslint/unbound-method': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+      // CDK's Template.hasResourceProperties / resourceCountIs throw on mismatch — they assert.
+      'jest/expect-expect': ['warn', { assertFunctionNames: ['expect', 'template.*'] }],
     },
   },
   {

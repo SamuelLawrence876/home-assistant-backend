@@ -47,7 +47,9 @@ export class RequestHandler extends Construct {
       deadLetterQueue: dlq,
     });
 
-    table.grantReadWriteData(this.fn);
-    bucket.grantReadWrite(this.fn);
+    // Read-only: the handler only serves /health and data-service.ts only does Get/Query.
+    // Widen per-route when a write path actually ships.
+    table.grantReadData(this.fn);
+    bucket.grantRead(this.fn);
   }
 }
