@@ -5,6 +5,7 @@ import {
   Distribution,
   HttpVersion,
   PriceClass,
+  ResponseHeadersPolicy,
   SecurityPolicyProtocol,
   ViewerProtocolPolicy,
 } from 'aws-cdk-lib/aws-cloudfront';
@@ -13,11 +14,18 @@ import { Certificate, CertificateValidation } from 'aws-cdk-lib/aws-certificatem
 import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { CloudFrontTarget } from 'aws-cdk-lib/aws-route53-targets';
 import { BlockPublicAccess, Bucket, BucketEncryption } from 'aws-cdk-lib/aws-s3';
-import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
-import * as path from 'path';
 import { config } from '../../config';
 
+/**
+ * S3 + CloudFront for the Glasshouse dashboard.
+ *
+ * This construct owns the *infrastructure* only. Bucket contents belong to the ui repo
+ * (SamuelLawrence876/home-assistant-ui, .github/workflows/deploy.yml), which syncs its own
+ * build and invalidates this distribution. Deliberately no BucketDeployment here: it would
+ * make `cdk deploy` a second publisher of the same bucket, republishing (and pruning against)
+ * whatever stale bundle happened to be on the deployer's disk.
+ */
 export class Frontend extends Construct {
   public readonly bucket: Bucket;
 
@@ -58,6 +66,10 @@ export class Frontend extends Construct {
         viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         allowedMethods: AllowedMethods.ALLOW_GET_HEAD,
         cachePolicy: CachePolicy.CACHING_OPTIMIZED,
+        // HSTS, nosniff, X-Frame-Options: SAMEORIGIN, strict-origin-when-cross-origin.
+        // The managed policy sets no CSP, so the app's WebSocket to the Funnel host and its
+        // calls to api.spotify.com keep working.
+        responseHeadersPolicy: ResponseHeadersPolicy.SECURITY_HEADERS,
       },
       errorResponses: [
         {
@@ -79,16 +91,6 @@ export class Frontend extends Construct {
       zone: hostedZone,
       recordName: config.domain.app,
       target: RecordTarget.fromAlias(new CloudFrontTarget(this.distribution)),
-    });
-
-    // Uploads ui/dist to S3 and invalidates CloudFront on every deploy.
-    // The dist directory must exist at synth time — run `npm run build` in ui/ first.
-    new BucketDeployment(this, 'DeployFrontend', {
-      sources: [Source.asset(path.join(__dirname, '../../../../../ui/dist'))],
-      destinationBucket: this.bucket,
-      distribution: this.distribution,
-      distributionPaths: ['/*'],
-      prune: true,
     });
 
     new CfnOutput(scope, 'FrontendUrl', {

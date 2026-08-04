@@ -23,7 +23,8 @@ export class HomeAssistantStack extends Stack {
     new Frontend(this, 'Frontend');
     // HaProxy (ha.samuel-lawrence.com CloudFront -> Tailscale Funnel) retired 2026-07-01:
     // the Glasshouse UI now hits the Funnel (sam.taile7763b.ts.net) directly, so this
-    // per-request-billed CloudFront proxy (~$14/mo) is no longer needed.
+    // per-request-billed CloudFront proxy (~$14/mo) is no longer needed. The construct and
+    // its config were deleted 2026-08-04; `git show 684ead0` has the original if it comes back.
     new ApiGateway(this, 'Api', {
       handler: requestHandler.fn,
       authorizer: auth.authorizer,

@@ -5,7 +5,6 @@ import {
   OAuthScope,
   UserPool,
   UserPoolClient,
-  UserPoolDomain,
   UserPoolEmail,
 } from 'aws-cdk-lib/aws-cognito';
 import { Construct } from 'constructs';
@@ -21,9 +20,13 @@ export class Auth extends Construct {
   constructor(scope: Construct, id: string) {
     super(scope, id);
 
+    const appUrl = `https://${config.domain.app}.${config.domain.root}/`;
+
     this.userPool = new UserPool(this, 'UserPool', {
       userPoolName: `${config.stackName}-user-pool`,
-      selfSignUpEnabled: true,
+      // Household pool, not a public product: accounts are created with adminCreateUser.
+      // Left open, anyone could register at the hosted UI and mint a JWT the API authoriser accepts.
+      selfSignUpEnabled: false,
       signInAliases: { email: true },
       autoVerify: { email: true },
       accountRecovery: AccountRecovery.EMAIL_ONLY,
@@ -39,7 +42,7 @@ export class Auth extends Construct {
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
-    const cognitoDomain: UserPoolDomain = this.userPool.addDomain('HostedDomain', {
+    this.userPool.addDomain('HostedDomain', {
       cognitoDomain: { domainPrefix: config.domain.auth },
     });
 
@@ -48,8 +51,9 @@ export class Auth extends Construct {
       authFlows: { userSrp: true },
       oAuth: {
         scopes: [OAuthScope.OPENID, OAuthScope.EMAIL, OAuthScope.PROFILE],
-        callbackUrls: [cognitoDomain.baseUrl()],
-        logoutUrls: [cognitoDomain.baseUrl()],
+        // The hosted UI must hand the user back to the dashboard, not to Cognito's own domain.
+        callbackUrls: [appUrl],
+        logoutUrls: [appUrl],
       },
       accessTokenValidity: Duration.hours(1),
       idTokenValidity: Duration.hours(1),

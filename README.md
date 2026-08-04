@@ -6,10 +6,10 @@ Backend service for **Home Assistant** — an AWS serverless API for managing sm
 
 - **Lambda function** (`home-assistant-request-handler`) with typed API Gateway v2 event handling for device commands (Node.js 22, ARM64)
 - **HTTP API** (API Gateway v2) at `home-assistant-api.samuel-lawrence.com` with JWT auth on everything except `/health`
-- **Cognito user pool** with hosted UI at `home-assistant-auth.auth.us-east-1.amazoncognito.com`
+- **Cognito user pool** with hosted UI at `home-assistant-auth.auth.us-east-1.amazoncognito.com`. Self-signup is off — create household accounts with `aws cognito-idp admin-create-user`
 - **DynamoDB table** (`home-assistant-devices`) with PAY_PER_REQUEST billing
 - **S3 bucket** (`home-assistant-storage`) for device snapshots, firmware, recordings
-- **CloudFront + S3** frontend distribution at `home-assistant.samuel-lawrence.com`
+- **CloudFront + S3** frontend distribution at `home-assistant.samuel-lawrence.com`, with the managed CloudFront security response headers. This stack owns the bucket and the distribution; the **contents** are published by the [ui repo](https://github.com/SamuelLawrence876/home-assistant-ui)'s own workflow (`aws s3 sync` + invalidation), so `cdk deploy` never touches the live bundle
 - **Dead letter queue** for failed Lambda invocations
 - **CDK v2 stack** with `NodejsFunction` (esbuild bundling)
 - **GitHub Actions** CI/CD — lint/test on PRs, single deploy on merge to `main`
@@ -48,16 +48,17 @@ npx cdk deploy
 ```
 ├── infrastructure/
 │   ├── bin/app.ts                       # CDK entry point
-│   └── lib/
-│       ├── config.ts                    # Stack name, region, domain
-│       ├── main-stack.ts                # HomeAssistantStack definition
-│       └── constructs/
-│           ├── api/api-gateway.ts       # HTTP API v2, custom domain, JWT authoriser
-│           ├── auth/auth.ts             # Cognito user pool + hosted UI
-│           ├── data/database.ts         # DynamoDB devices table
-│           ├── data/storage.ts          # S3 bucket for device media
-│           ├── frontend/frontend.ts     # CloudFront + S3 + custom domain
-│           └── lambda/request-handler.ts# NodejsFunction, DLQ, env vars, IAM grants
+│   ├── lib/
+│   │   ├── config.ts                    # Stack name, region, domain
+│   │   ├── main-stack.ts                # HomeAssistantStack definition
+│   │   └── constructs/
+│   │       ├── api/api-gateway.ts       # HTTP API v2, custom domain, JWT authoriser
+│   │       ├── auth/auth.ts             # Cognito user pool + hosted UI
+│   │       ├── data/database.ts         # DynamoDB devices table
+│   │       ├── data/storage.ts          # S3 bucket for device media
+│   │       ├── frontend/frontend.ts     # CloudFront + S3 + custom domain
+│   │       └── lambda/request-handler.ts# NodejsFunction, DLQ, env vars, IAM grants
+│   └── test/main-stack.test.ts          # CDK assertions (npm run test:infra)
 ├── src/
 │   ├── functions/
 │   │   └── requestHandler/             # Lambda handler, environment, data service + tests
